@@ -66,23 +66,45 @@ def fetch_sessions(meeting_key):
 
 @st.cache_data
 def fetch_laps(session_key):
-    # Retrieves detailed lap timing data for a given session
+    # Retrieves detailed lap timing data for a given session (historical — cached forever)
     return fetch_data("laps", {"session_key": session_key})
 
 
 @st.cache_data
 def fetch_stints(session_key):
-    # Fetches tire stint data, which includes tire compound and start/end laps
+    # Fetches tire stint data (historical — cached forever)
     return fetch_data("stints", {"session_key": session_key})
 
 
 @st.cache_data
 def fetch_pit_stop(session_key):
-    # Returns pit stop information, including duration and lap number
+    # Returns pit stop information (historical — cached forever)
     return fetch_data("pit", {"session_key": session_key})
 
 
 @st.cache_data
 def fetch_drivers(session_key):
-    # Provides driver metadata such as name, number, and team color
+    # Provides driver metadata such as name, number, and team color (historical — cached forever)
+    return fetch_data("drivers", {"session_key": session_key})
+
+
+# Live variants — TTL of 30 seconds so data stays fresh during an active session
+
+@st.cache_data(ttl=30)
+def fetch_laps_live(session_key):
+    return fetch_data("laps", {"session_key": session_key})
+
+
+@st.cache_data(ttl=30)
+def fetch_stints_live(session_key):
+    return fetch_data("stints", {"session_key": session_key})
+
+
+@st.cache_data(ttl=30)
+def fetch_pit_stop_live(session_key):
+    return fetch_data("pit", {"session_key": session_key})
+
+
+@st.cache_data(ttl=30)
+def fetch_drivers_live(session_key):
     return fetch_data("drivers", {"session_key": session_key})
