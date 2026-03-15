@@ -38,7 +38,7 @@ LIVE_REFRESH_SECONDS = 30
 st.set_page_config(page_title="F1 Strategy Dashboard", layout="wide")
 
 st.title("🏎️ Formula 1 Strategy Dashboard")
-st.markdown("_Powered by OpenF1.org • Built by Attila Bordan_")
+st.markdown("_Powered by FastF1 & OpenF1.org • Originally forked from OpenF1 project by Attila Bordan_")
 
 # ── Year / Country / Meeting selection ────────────────────────────────────────
 
