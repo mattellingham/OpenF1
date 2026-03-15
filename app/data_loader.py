@@ -12,14 +12,16 @@ OPENF1_USERNAME = os.getenv("OPENF1_USERNAME")
 OPENF1_PASSWORD = os.getenv("OPENF1_PASSWORD")
 TOKEN_URL = "https://api.openf1.org/token"
 
-# Module-level token cache — persists for the life of the process.
-# Streamlit re-runs the script on each interaction but doesn't restart the
-# process, so this survives across page interactions without hitting the
-# token endpoint every time.
 _token_cache: dict = {
     "access_token": None,
-    "expires_at": None,   # datetime (UTC)
+    "expires_at": None,
 }
+
+
+class OpenF1Unavailable(Exception):
+    """Raised when OpenF1's servers return a 5xx error.
+    Callers should catch this and try the FastF1 fallback instead."""
+    pass
 
 
 def _get_access_token() -> str | None:
@@ -29,16 +31,14 @@ def _get_access_token() -> str | None:
     Tokens expire after 1 hour; we refresh 60s early to avoid edge cases.
     """
     if not OPENF1_USERNAME or not OPENF1_PASSWORD:
-        return None  # Unauthenticated — fine for historical data
+        return None
 
     now = datetime.now(timezone.utc)
     expires_at = _token_cache.get("expires_at")
 
-    # Return cached token if still valid with >60s remaining
     if _token_cache["access_token"] and expires_at and expires_at - now > timedelta(seconds=60):
         return _token_cache["access_token"]
 
-    # Fetch a new token
     try:
         response = requests.post(
             TOKEN_URL,
@@ -64,15 +64,11 @@ def fetch_data(endpoint, params=None):
     """
     Fetch data from the OpenF1 API and return it as a DataFrame.
 
-    Automatically attaches a Bearer token if credentials are configured in .env.
-    Falls back to unauthenticated requests if no credentials are set.
-
-    Args:
-        endpoint (str): API endpoint (e.g., "meetings", "sessions").
-        params (dict): Optional query parameters for the API.
-
+    Raises:
+        OpenF1Unavailable: when the API returns 502/503 (server overload/outage).
+            Callers should catch this and use the FastF1 fallback.
     Returns:
-        pd.DataFrame: DataFrame containing the API response data.
+        pd.DataFrame: empty DataFrame on 404 (session not yet available).
     """
     if params is None:
         params = {}
@@ -87,24 +83,23 @@ def fetch_data(endpoint, params=None):
 
     response = requests.get(full_url, headers=headers, timeout=15)
 
+    # 404 = session exists in schedule but no data yet (future race)
     if response.status_code == 404:
         return pd.DataFrame()
 
+    # 502/503 = OpenF1 servers down or overloaded — raise so callers can
+    # fall back to FastF1. Don't return empty DF or st.cache_data will cache it.
     if response.status_code in (502, 503):
-        st.error("⚠️ OpenF1 API is temporarily unavailable. Please try again in a moment.")
-        return pd.DataFrame()
+        raise OpenF1Unavailable(f"OpenF1 returned {response.status_code} for {endpoint}")
 
     response.raise_for_status()
     return pd.DataFrame(response.json())
+
 
 # ── Cached API calls ──────────────────────────────────────────────────────────
 
 @st.cache_data
 def fetch_all_meetings(year):
-    """
-    Fetch all meetings (races) for a given year.
-    Cached indefinitely — the calendar for a completed year won't change.
-    """
     df = fetch_data("meetings", {"year": year})
     if df.empty:
         st.error("⚠️ No meeting data found.")
@@ -114,7 +109,6 @@ def fetch_all_meetings(year):
 
 @st.cache_data
 def fetch_sessions(meeting_key):
-    """All sessions for a given meeting (FP1, Quali, Race etc.)."""
     df = fetch_data("sessions", {"meeting_key": meeting_key})
     df["label"] = df["session_name"] + " (" + df["date_start"] + ")"
     return df[["session_key", "label"]].drop_duplicates()
