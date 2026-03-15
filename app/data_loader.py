@@ -31,7 +31,7 @@ def fetch_data(endpoint, params=None):
 
     url = f"{BASE_URL}{endpoint}"
     full_url = requests.Request('GET', url, params=params).prepare().url
-    response = requests.get(full_url)
+    response = requests.get(full_url, timeout=15)
     response.raise_for_status()
     return pd.DataFrame(response.json())
 
@@ -39,20 +39,16 @@ def fetch_data(endpoint, params=None):
 # Cached API calls using Streamlit's cache_data decorator
 
 @st.cache_data
-def fetch_meetings(year, country):
-    # The 'meetings' endpoint returns all information for a specified meeting (Miami, Monaco, Imola, etc)
-    # for a specified year (2023, 2024, etc).
-    df = fetch_data("meetings", {"year": year, "country_name": country})
+def fetch_all_meetings(year):
+    """
+    Fetch all meetings (races) for a given year.
+    Cached so the API is not called again on every widget interaction.
+    """
+    df = fetch_data("meetings", {"year": year})
     if df.empty:
         st.error("⚠️ No meeting data found.")
         return pd.DataFrame()
-
-    # Create a label for easier dropdown display
-    df["label"] = df["meeting_name"] + " - " + df["location"]
-    df = df.sort_values(by="meeting_key", ascending=False)
-
-    # Return minimal relevant fields
-    return df[["meeting_key", "label", "year"]].drop_duplicates()
+    return df
 
 
 @st.cache_data
