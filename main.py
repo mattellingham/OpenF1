@@ -1,6 +1,7 @@
 import streamlit as st
 from app.data_loader import (
     fetch_data,
+    fetch_all_meetings,
     fetch_sessions,
     fetch_laps,
     fetch_stints,
@@ -27,12 +28,11 @@ st.markdown("_Powered by OpenF1.org • Built by Attila Bordan_")
 col1, col2 = st.columns(2)
 
 with col1:
-    # Step 1: Select Year and Country dynamically
     available_years = [2023, 2024, 2025]
     selected_year = st.selectbox("Select Year", available_years, index=len(available_years) - 1)
 
-    # Fetch all meetings for selected year
-    all_meetings = fetch_data("meetings", {"year": selected_year})
+    # Use cached fetch_all_meetings to avoid re-fetching on every widget interaction
+    all_meetings = fetch_all_meetings(selected_year)
 
     if all_meetings.empty:
         st.error("No meetings found for this year.")
@@ -41,7 +41,6 @@ with col1:
     available_countries = sorted(all_meetings["country_name"].dropna().unique())
     selected_country = st.selectbox("Select Country", available_countries)
 
-    # Filter meetings for selected year and country
     filtered_meetings = all_meetings[all_meetings["country_name"] == selected_country].copy()
     filtered_meetings["label"] = filtered_meetings["meeting_name"] + " - " + filtered_meetings["location"]
     filtered_meetings = filtered_meetings.sort_values(by="meeting_key", ascending=False)
@@ -69,20 +68,21 @@ driver_color_map = build_driver_color_map(driver_df)
 driver_info = driver_df[["driver_number", "name_acronym"]]
 
 # Lap Times
+lap_fig = None
 with st.expander(f"📈 Lap Time Chart for {selected_session_type} at {selected_country} {selected_year}",
                  expanded=True):
     lap_df = fetch_laps(selected_session_key)
     processed_df = process_lap_data(lap_df)
 
-    # Merge name_acronym into the lap data
     processed_df["driver_number"] = processed_df["driver_number"].astype(str)
     processed_df = processed_df.merge(driver_info, on="driver_number", how="left")
 
     if processed_df.empty:
         st.warning("No lap time data found.")
     else:
-        fig = plot_lap_times(processed_df, driver_color_map)
-        st.plotly_chart(fig, use_container_width=True)
+        lap_fig = plot_lap_times(processed_df, driver_color_map)
+        if lap_fig:
+            st.plotly_chart(lap_fig, use_container_width=True)
 
 # Tire Strategy
 with st.expander(f"🛞 Tire strategy for {selected_session_type} at {selected_country} {selected_year}", expanded=True):
@@ -95,7 +95,8 @@ with st.expander(f"🛞 Tire strategy for {selected_session_type} at {selected_c
         st.warning("No tire strategy data found.")
     else:
         fig = plot_tire_strategy(stints_df, driver_color_map)
-        st.plotly_chart(fig, use_container_width=True)
+        if fig:
+            st.plotly_chart(fig, use_container_width=True)
 
 # Pit Stops
 with st.expander(f"⏱  Pit stop durations for {selected_session_type} at {selected_country} {selected_year}",
@@ -109,7 +110,9 @@ with st.expander(f"⏱  Pit stop durations for {selected_session_type} at {selec
         st.warning("No pit stop data found.")
     else:
         fig = plot_pit_stop(pit_stop_df, driver_color_map)
-        st.plotly_chart(fig, use_container_width=True)
+        if fig:
+            st.plotly_chart(fig, use_container_width=True)
 
-if processed_df.empty:
+# Safe fallback info message — processed_df is guaranteed to exist here
+if 'processed_df' not in locals() or processed_df.empty:
     st.info("Lap data is not available for this session.")
