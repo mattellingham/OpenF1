@@ -86,12 +86,6 @@ def fetch_data(endpoint, params=None):
         headers["Authorization"] = f"Bearer {token}"
 
     response = requests.get(full_url, headers=headers, timeout=15)
-
-    # 404 means the session exists in the schedule but has no data yet
-    # (e.g. a future race). Return empty DataFrame instead of crashing.
-    if response.status_code == 404:
-        return pd.DataFrame()
-
     response.raise_for_status()
     return pd.DataFrame(response.json())
 
