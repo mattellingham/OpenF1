@@ -101,9 +101,6 @@ def fetch_data(endpoint, params=None):
 @st.cache_data
 def fetch_all_meetings(year):
     df = fetch_data("meetings", {"year": year})
-    if df.empty:
-        st.error("⚠️ No meeting data found.")
-        return pd.DataFrame()
     return df
 
 

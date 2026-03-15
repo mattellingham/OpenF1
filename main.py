@@ -56,7 +56,6 @@ with col1:
             raise OpenF1Unavailable("No meetings returned")
     except OpenF1Unavailable:
         fastf1_mode = True
-        st.warning("⚡ OpenF1 unavailable — using FastF1 for calendar data", icon="⚠️")
         all_meetings = get_meetings_fastf1(selected_year)
 
     if all_meetings.empty:
@@ -85,7 +84,6 @@ with col2:
             sessions_df = fetch_sessions(selected_meeting_key)
         except OpenF1Unavailable:
             fastf1_mode = True
-            st.warning("⚡ OpenF1 unavailable — using FastF1 for session list", icon="⚠️")
             sessions_df = get_sessions_fastf1(selected_year, selected_country)
 
     if sessions_df.empty:
@@ -139,7 +137,7 @@ with badge_col:
 with st.expander("📋 Session Details", expanded=False):
     st.write(f"**Meeting Key:** {selected_meeting_key}")
     st.write(f"**Session Key:** {selected_session_key}")
-    st.write(f"**Data source:** {'FastF1 (OpenF1 unavailable)' if fastf1_mode else 'OpenF1'}")
+    st.write(f"**Data source:** {'FastF1 (historical) / Local ingestor (live)' if fastf1_mode else 'Local OpenF1'}")
     st.write(f"**Live session:** {'Yes' if live else 'No'}")
     if live:
         st.write(f"**Auto-refresh:** every {LIVE_REFRESH_SECONDS}s")

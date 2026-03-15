@@ -50,6 +50,7 @@ def get_meetings_fastf1(year: int) -> pd.DataFrame:
             "RoundNumber": "meeting_key",
             "Country": "country_name",
             "EventName": "meeting_name",
+            "Location": "location",
         })
         return df
     except Exception as e:
