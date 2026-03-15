@@ -1,149 +1,161 @@
-# OpenF1 API: Interactive Strategy Dashboard Tutorial with Streamlit & Plotly
+# OpenF1 API: Interactive F1 Strategy Dashboard
 
-Welcome to this tutorial, where you'll learn to build an interactive Formula 1 strategy dashboard using the OpenF1 API, Streamlit, and Plotly. This hands-on project is ideal for those interested in data visualization, sports analytics, and modern Python web tools.
+An interactive Formula 1 strategy dashboard built with the OpenF1 API, Streamlit, and Plotly. Supports historical data browsing (2023–2026) and live session auto-refresh during active race weekends.
 
-## 📊 Overview
+Forked from [bordanattila/OpenF1_tutorial](https://github.com/bordanattila/OpenF1_tutorial).
 
-This dashboard enables users to:
-- Select a race by year and country
-- View lap times per driver with pit stop flags
-- Analyze tire strategy over the race distance
+## 📊 Features
+
+- Select race sessions by year (2023–2026) and country
+- View lap times per driver with pit-out lap flags
+- Analyse tire strategy over the race distance
 - Compare pit stop durations
+- 🔴 **Live mode** — auto-detects active sessions and refreshes charts every 30 seconds
+- Authenticated access to real-time and 2026 data via OpenF1 OAuth2
 
-### Technologies used:
-- **OpenF1 API** for motorsport telemetry data  
-- **Pandas** for data handling  
-- **Plotly** for interactive charts  
-- **Streamlit** for web UI  
-
----
-
-## 📁 Project Structure
-
-```
-openf1-dashboard-tutorial/
-├── app/
-│   ├── data_loader.py        # Handles OpenF1 API requests
-│   ├── data_processor.py     # Cleans and enriches OpenF1 data
-│   └── visualizer.py         # Builds interactive visualizations from OpenF1 data
-├── main.py                   # Streamlit app logic
-├── requirements.txt          # Python dependencies
-└── .env                      # Contains BASE_API_URL for OpenF1
-```
-
----
-
-## 📸 Screenshot
+## 📸 Screenshots
 
 ![lap_time_chart](./assets/Screenshot1.png)
 ![tyre_strategy_chart](./assets/Screenshot2.png)
 ![pit_stop_chart](./assets/Screenshot3.png)
 
-## 🛠️ Setup & Requirements
+## 🗂 Project Structure
 
-### 1. Create and activate a virtual environment
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+OpenF1/
+├── app/
+│   ├── data_loader.py        # OpenF1 API requests, auth, and caching
+│   ├── data_processor.py     # Cleans and enriches raw API data
+│   └── visualizer.py         # Builds Plotly charts
+├── .streamlit/
+│   └── config.toml           # Binds to 0.0.0.0:8501 for LAN access
+├── main.py                   # Streamlit app logic and live/historical routing
+├── requirements.txt          # Pinned Python dependencies
+├── Dockerfile                # Container build
+├── docker-compose.yml        # One-command container deployment
+└── .env                      # Credentials and API base URL (not committed)
 ```
 
-### 2. Install dependencies
+## 🛠️ Setup
+
+### 1. Clone the repo
+
 ```bash
-pip install streamlit pandas plotly python-dotenv
+git clone https://github.com/mattellingham/OpenF1.git
+cd OpenF1
 ```
 
-### 3. Create a `.env` file
+### 2. Create and activate a virtual environment
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### 3. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Configure `.env`
+
+```bash
+cp .env.example .env
+nano .env
+```
+
+Fill in your values:
+
 ```
 BASE_API_URL=https://api.openf1.org/v1/
+
+# Required for 2026 data and live sessions
+# Get access at: https://openf1.org/auth.html
+OPENF1_USERNAME=your_username_or_email
+OPENF1_PASSWORD=your_password
 ```
 
----
+If you leave the credentials blank the app will still work for historical data (2023–2025) without authentication.
 
-## 🚀 Launch the App
+## 🚀 Running the App
+
+### Directly
 
 ```bash
 streamlit run main.py
 ```
 
-This will open the dashboard in your default browser.
+Access at `http://localhost:8501`, or `http://<your-ip>:8501` from other devices on your LAN.
 
----
+### As a persistent background service (Linux/systemd)
 
-### 3. 📂 main.py Highlights
-
-#### Features:
-
-Dynamic year/country selection
-
-Granular session data filtering
-
-Lap time, tire strategy, and pit stop visualizations
-
-#### Key Flow:
-
-Fetch meeting/session info via data_loader.py
-
-Process raw data in data_processor.py
-
-Visualize with plot_lap_times(), plot_tire_strategy(), plot_pit_stop() from visualizer.py
-
-##### Inline comments in the code guide you through OpenF1 endpoint usage:
-
-meetings returns all races in a season
-
-sessions returns FP1, Quali, Race for a given race (meeting_key)
-
-laps, pit, stints, and drivers use session_key to pull telemetry data
-
-
-### 4 🔍 File Descriptions
 ```bash
-data_loader.py
+sudo nano /etc/systemd/system/openf1.service
 ```
-Handles OpenF1 API calls using requests, with optional pagination logic. Each fetch function:
 
-Specifies the OpenF1 endpoint (e.g., "laps", "drivers")
+```ini
+[Unit]
+Description=OpenF1 Streamlit Dashboard
+After=network.target
 
-Applies query filters (like session_key or meeting_key)
+[Service]
+Type=simple
+User=your_username
+WorkingDirectory=/home/your_username/OpenF1
+ExecStart=/home/your_username/OpenF1/venv/bin/streamlit run main.py
+Restart=on-failure
+RestartSec=5
 
-Uses @st.cache_data to reduce network calls
+[Install]
+WantedBy=multi-user.target
+```
+
 ```bash
-data_processor.py
+sudo systemctl daemon-reload
+sudo systemctl enable openf1
+sudo systemctl start openf1
 ```
-Cleans and formats raw OpenF1 data:
 
-Filters invalid lap or pit rows
+Check status: `sudo systemctl status openf1`
+View logs: `journalctl -u openf1 -f`
 
-Calculates stint lap ranges from lap_start to lap_end
+### With Docker
 
-Builds a driver_color_map from drivers.team_colour to use in plots
 ```bash
-visualizer.py
+docker compose up -d
 ```
-Creates interactive charts:
 
-plot_lap_times(): line chart of lap_duration colored by driver
+Access at `http://<your-ip>:8501`.
 
-plot_tire_strategy(): horizontal bar chart from stints
+## 🔑 Authentication
 
-plot_pit_stop(): vertical bar chart for pit_duration
+Access to 2026 data and real-time sessions requires a paid OpenF1 account. You can get access at [openf1.org/auth.html](https://openf1.org/auth.html).
 
-All charts format hover templates and colors using OpenF1 data fields.
+Once configured in `.env`, the app handles OAuth2 token management automatically — tokens are fetched on first request, cached in memory, and refreshed before expiry. No manual token handling needed.
 
----
+## 🔴 Live Mode
 
-## 💡 Extend This Project
+When a session is currently in progress, the app automatically switches to live mode:
 
-Ideas to build on:
-- Add tire degradation trends
-- Compare qualifying vs. race pace
-- Highlight fastest laps and race events
-- Integrate sector time analytics
+- A **🔴 LIVE** badge appears in the session header
+- All three charts refresh independently every 30 seconds using Streamlit fragments
+- Live data fetchers use a 30-second cache TTL; historical fetchers cache indefinitely
 
----
+The refresh interval can be tuned by changing `LIVE_REFRESH_SECONDS` at the top of `main.py`.
 
-## 🎉 Conclusion
+## 🔍 File Descriptions
 
-You've now built an interactive F1 dashboard using real-world telemetry data from the OpenF1 API. This is a great example of combining API usage, data processing, and visual storytelling in Python.
+**`app/data_loader.py`** handles all OpenF1 API communication. It manages OAuth2 token acquisition and caching, attaches `Authorization` headers when credentials are present, and returns empty DataFrames for 404 (session not yet available) and 502/503 (API outage) responses rather than crashing. Each endpoint has both a permanent-cache and a 30-second TTL variant for live use.
 
-Fork it, share it, or showcase it in your portfolio!
+**`app/data_processor.py`** cleans and prepares raw API data — filters laps missing duration, calculates stint lap counts, and builds a driver-to-team-colour mapping for the charts.
+
+**`app/visualizer.py`** builds the three Plotly figures: a lap time line chart, a horizontal tire strategy bar chart, and a pit stop duration bar chart. All use driver team colours and custom hover templates.
+
+## 💡 Ideas for Extension
+
+- Add tire degradation trend lines
+- Compare qualifying vs race pace
+- Highlight fastest lap per driver
+- Sector time breakdown charts
+- MQTT/WebSocket integration for sub-30s live updates
