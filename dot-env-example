@@ -1,0 +1,6 @@
+BASE_API_URL=https://api.openf1.org/v1/
+
+# OpenF1 authenticated account credentials (required for live/2026 data)
+# Get access at: https://buy.stripe.com/eVqcN41BPekP0iIalBcEw02
+OPENF1_USERNAME=your_username_or_email
+OPENF1_PASSWORD=your_password
