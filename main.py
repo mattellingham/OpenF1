@@ -34,7 +34,7 @@ st.markdown("_Powered by OpenF1.org • Built by Attila Bordan_")
 col1, col2 = st.columns(2)
 
 with col1:
-    available_years = [2023, 2024, 2025]
+    available_years = [2023, 2024, 2025, 2026]
     selected_year = st.selectbox("Select Year", available_years, index=len(available_years) - 1)
 
     all_meetings = fetch_all_meetings(selected_year)
