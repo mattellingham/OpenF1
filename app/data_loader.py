@@ -86,6 +86,14 @@ def fetch_data(endpoint, params=None):
         headers["Authorization"] = f"Bearer {token}"
 
     response = requests.get(full_url, headers=headers, timeout=15)
+
+    if response.status_code == 404:
+        return pd.DataFrame()
+
+    if response.status_code in (502, 503):
+        st.error("⚠️ OpenF1 API is temporarily unavailable. Please try again in a moment.")
+        return pd.DataFrame()
+
     response.raise_for_status()
     return pd.DataFrame(response.json())
 
