@@ -3,3 +3,4 @@ pandas==2.2.3
 requests==2.32.3
 plotly==5.24.1
 python-dotenv==1.0.1
+fastf1==3.5.3

@@ -1,6 +1,7 @@
 import streamlit as st
 from datetime import datetime, timezone
 from app.data_loader import (
+    OpenF1Unavailable,
     fetch_all_meetings,
     fetch_sessions,
     fetch_laps,
@@ -11,6 +12,12 @@ from app.data_loader import (
     fetch_stints_live,
     fetch_pit_stop_live,
     fetch_drivers_live,
+)
+from app.fastf1_fallback import (
+    get_laps_fastf1,
+    get_stints_fastf1,
+    get_pit_stops_fastf1,
+    get_drivers_fastf1,
 )
 from app.data_processor import (
     process_lap_data,
@@ -26,10 +33,10 @@ from app.visualizer import (
 
 LIVE_REFRESH_SECONDS = 30
 
-st.set_page_config(page_title="F1 Dashboard", layout="wide")
+st.set_page_config(page_title="F1 Strategy Dashboard", layout="wide")
 
 st.title("🏎️ Formula 1 Strategy Dashboard")
-st.markdown("_Powered by OpenF1.org • Forked from a project by Attila Bordan_")
+st.markdown("_Powered by OpenF1.org • Built by Attila Bordan_")
 
 col1, col2 = st.columns(2)
 
@@ -64,10 +71,6 @@ with col2:
 
 
 def is_session_live(session_key) -> bool:
-    """
-    Return True if the selected session is currently in progress.
-    Compares the session's date_start and date_end against the current UTC time.
-    """
     try:
         from app.data_loader import fetch_data
         session_rows = fetch_data("sessions", {"session_key": session_key})
@@ -88,7 +91,8 @@ def is_session_live(session_key) -> bool:
 
 live = is_session_live(selected_session_key)
 
-# Session header with live badge
+# ── Session header ────────────────────────────────────────────────────────────
+
 header_col, badge_col = st.columns([8, 1])
 with header_col:
     st.markdown(f"### 🏁 Session Overview: `{selected_session}`")
@@ -108,17 +112,39 @@ with st.expander("📋 Session Details", expanded=False):
         st.write(f"**Auto-refresh:** every {LIVE_REFRESH_SECONDS}s")
 
 
-def render_lap_times(session_key, session_type, country, year, is_live):
-    get_laps = fetch_laps_live if is_live else fetch_laps
-    get_drivers = fetch_drivers_live if is_live else fetch_drivers
+# ── Shared helpers ────────────────────────────────────────────────────────────
 
-    driver_df = get_drivers(session_key)
+def _get_drivers_and_colors(session_key, year, country, session_type, is_live=False):
+    """Fetch driver info, falling back to FastF1 if OpenF1 is unavailable."""
+    try:
+        fn = fetch_drivers_live if is_live else fetch_drivers
+        driver_df = fn(session_key)
+    except OpenF1Unavailable:
+        driver_df = get_drivers_fastf1(year, country, session_type)
+
     driver_df["driver_number"] = driver_df["driver_number"].astype(str)
-    driver_color_map = build_driver_color_map(driver_df)
-    driver_info = driver_df[["driver_number", "name_acronym"]]
+    color_map = build_driver_color_map(driver_df)
+    info = driver_df[["driver_number", "name_acronym"]]
+    return color_map, info
+
+
+# ── Chart render functions ────────────────────────────────────────────────────
+
+def render_lap_times(session_key, session_type, country, year, is_live=False):
+    color_map, driver_info = _get_drivers_and_colors(
+        session_key, year, country, session_type, is_live
+    )
 
     with st.expander(f"📈 Lap Time Chart for {session_type} at {country} {year}", expanded=True):
-        lap_df = get_laps(session_key)
+        try:
+            fn = fetch_laps_live if is_live else fetch_laps
+            lap_df = fn(session_key)
+            source = "OpenF1"
+        except OpenF1Unavailable:
+            st.info("⚡ OpenF1 unavailable — using FastF1 data", icon="ℹ️")
+            lap_df = get_laps_fastf1(year, country, session_type)
+            source = "FastF1"
+
         processed_df = process_lap_data(lap_df)
         processed_df["driver_number"] = processed_df["driver_number"].astype(str)
         processed_df = processed_df.merge(driver_info, on="driver_number", how="left")
@@ -126,18 +152,26 @@ def render_lap_times(session_key, session_type, country, year, is_live):
         if processed_df.empty:
             st.warning("No lap time data found.")
         else:
-            fig = plot_lap_times(processed_df, driver_color_map)
+            fig = plot_lap_times(processed_df, color_map)
             if fig:
                 st.plotly_chart(fig, use_container_width=True)
+                if source == "FastF1":
+                    st.caption("Data source: FastF1")
 
-    return driver_color_map, driver_info
+    return color_map, driver_info
 
 
-def render_tire_strategy(session_key, session_type, country, year, driver_info, driver_color_map, is_live):
-    get_stints = fetch_stints_live if is_live else fetch_stints
-
+def render_tire_strategy(session_key, session_type, country, year, driver_info, color_map, is_live=False):
     with st.expander(f"🛞 Tire strategy for {session_type} at {country} {year}", expanded=True):
-        stints = get_stints(session_key)
+        try:
+            fn = fetch_stints_live if is_live else fetch_stints
+            stints = fn(session_key)
+            source = "OpenF1"
+        except OpenF1Unavailable:
+            st.info("⚡ OpenF1 unavailable — using FastF1 data", icon="ℹ️")
+            stints = get_stints_fastf1(year, country, session_type)
+            source = "FastF1"
+
         stints_df = process_stints(stints)
         stints_df["driver_number"] = stints_df["driver_number"].astype(str)
         stints_df = stints_df.merge(driver_info, on="driver_number", how="left")
@@ -145,16 +179,24 @@ def render_tire_strategy(session_key, session_type, country, year, driver_info, 
         if stints_df.empty:
             st.warning("No tire strategy data found.")
         else:
-            fig = plot_tire_strategy(stints_df, driver_color_map)
+            fig = plot_tire_strategy(stints_df, color_map)
             if fig:
                 st.plotly_chart(fig, use_container_width=True)
+                if source == "FastF1":
+                    st.caption("Data source: FastF1")
 
 
-def render_pit_stops(session_key, session_type, country, year, driver_info, driver_color_map, is_live):
-    get_pit = fetch_pit_stop_live if is_live else fetch_pit_stop
-
+def render_pit_stops(session_key, session_type, country, year, driver_info, color_map, is_live=False):
     with st.expander(f"⏱  Pit stop durations for {session_type} at {country} {year}", expanded=True):
-        pit_stop = get_pit(session_key)
+        try:
+            fn = fetch_pit_stop_live if is_live else fetch_pit_stop
+            pit_stop = fn(session_key)
+            source = "OpenF1"
+        except OpenF1Unavailable:
+            st.info("⚡ OpenF1 unavailable — using FastF1 data", icon="ℹ️")
+            pit_stop = get_pit_stops_fastf1(year, country, session_type)
+            source = "FastF1"
+
         pit_stop_df = process_pit_stops(pit_stop)
         pit_stop_df["driver_number"] = pit_stop_df["driver_number"].astype(str)
         pit_stop_df = pit_stop_df.merge(driver_info, on="driver_number", how="left")
@@ -162,10 +204,14 @@ def render_pit_stops(session_key, session_type, country, year, driver_info, driv
         if pit_stop_df.empty:
             st.warning("No pit stop data found.")
         else:
-            fig = plot_pit_stop(pit_stop_df, driver_color_map)
+            fig = plot_pit_stop(pit_stop_df, color_map)
             if fig:
                 st.plotly_chart(fig, use_container_width=True)
+                if source == "FastF1":
+                    st.caption("Data source: FastF1")
 
+
+# ── Routing: live fragments vs historical single render ───────────────────────
 
 if live:
     @st.fragment(run_every=LIVE_REFRESH_SECONDS)
@@ -177,10 +223,10 @@ if live:
 
     @st.fragment(run_every=LIVE_REFRESH_SECONDS)
     def live_tire_strategy():
-        driver_df = fetch_drivers_live(selected_session_key)
-        driver_df["driver_number"] = driver_df["driver_number"].astype(str)
-        color_map = build_driver_color_map(driver_df)
-        info = driver_df[["driver_number", "name_acronym"]]
+        color_map, info = _get_drivers_and_colors(
+            selected_session_key, selected_year,
+            selected_country, selected_session_type, is_live=True
+        )
         render_tire_strategy(
             selected_session_key, selected_session_type,
             selected_country, selected_year, info, color_map, is_live=True
@@ -188,10 +234,10 @@ if live:
 
     @st.fragment(run_every=LIVE_REFRESH_SECONDS)
     def live_pit_stops():
-        driver_df = fetch_drivers_live(selected_session_key)
-        driver_df["driver_number"] = driver_df["driver_number"].astype(str)
-        color_map = build_driver_color_map(driver_df)
-        info = driver_df[["driver_number", "name_acronym"]]
+        color_map, info = _get_drivers_and_colors(
+            selected_session_key, selected_year,
+            selected_country, selected_session_type, is_live=True
+        )
         render_pit_stops(
             selected_session_key, selected_session_type,
             selected_country, selected_year, info, color_map, is_live=True
