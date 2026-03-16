@@ -83,7 +83,6 @@ class TyreDegradationChart(F1Chart):
         # Minimum 4 laps per stint to fit a meaningful trend
         min_laps = 4
         fig = go.Figure()
-        legend_compounds = set()
 
         for (driver, compound), group in combined.groupby(["name_acronym", "compound"]):
             group = group.sort_values("stint_lap")
@@ -111,15 +110,15 @@ class TyreDegradationChart(F1Chart):
                 trend_y = np.polyval(coeffs, trend_x)
                 deg_per_lap = coeffs[0]
 
-                show_legend = compound_upper not in legend_compounds
-                legend_compounds.add(compound_upper)
+
+
 
                 fig.add_trace(go.Scatter(
                     x=trend_x, y=trend_y,
                     mode="lines",
-                    name=compound_upper,
-                    line=dict(color=comp_color, width=2, dash="solid"),
-                    showlegend=show_legend,
+                    name=f"{driver} ({compound_upper})",
+                    line=dict(color=color, width=2, dash="solid"),
+                    showlegend=True,
                     hovertemplate=(
                         f"<b>{driver} – {compound_upper}</b><br>"
                         f"Deg rate: {deg_per_lap:+.3f}s/lap<extra></extra>"
