@@ -32,7 +32,8 @@ class RaceControlChart(F1Chart):
             return
 
         rc = rc.copy()
-        rc["minutes"] = rc["Time"].dt.total_seconds() / 60
+        t0 = rc["Time"].iloc[0]
+        rc["minutes"] = (rc["Time"] - t0).dt.total_seconds() / 60
         rc["Flag"] = rc["Flag"].fillna("").str.upper()
         rc["Category"] = rc["Category"].fillna("")
 
