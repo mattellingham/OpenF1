@@ -104,7 +104,7 @@ def _render_race_results(race: dict):
           <td class="pts">{r['pts']}</td>
         </tr>"""
     html += "</tbody></table>"
-    st.markdown(html, unsafe_allow_html=True)
+    st.html(html)
 
 
 def _render_qualifying_results(race: dict):
@@ -157,7 +157,7 @@ def _render_qualifying_results(race: dict):
           <td style="font-variant-numeric:tabular-nums;color:#aaa">{q3}</td>
         </tr>"""
     html += "</tbody></table>"
-    st.markdown(html, unsafe_allow_html=True)
+    st.html(html)
 
 
 def render(year: int):
