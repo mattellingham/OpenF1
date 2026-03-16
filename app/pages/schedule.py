@@ -179,9 +179,9 @@ def render(year: int):
         except Exception:
             continue
         if rd > now and next_round is None:
-            next_round = int(r["round"])
+            next_round = int(r.get("round") or r.get("Round") or 0)
         if rd <= now:
-            last_round = int(r["round"])
+            last_round = int(r.get("round") or r.get("Round") or 0)
 
     # ── Layout ────────────────────────────────────────────────────────────────
     cal_col, res_col = st.columns([1, 1.4])
@@ -202,7 +202,7 @@ def render(year: int):
             except Exception:
                 done = False
 
-            rnum = int(r["round"])
+            rnum = int(r.get("round") or r.get("Round") or 0)
             flag = country_flag(r.get("Circuit", {}).get("Location", {}).get("country", ""))
             name = r.get("raceName", "")
             locality = r.get("Circuit", {}).get("Location", {}).get("locality", "")
