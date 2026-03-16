@@ -14,6 +14,7 @@ Forked from [bordanattila/OpenF1_tutorial](https://github.com/bordanattila/OpenF
 |---|---|
 | Lap Times | `assets/screenshot_lap_times.png` |
 | Tire Strategy | `assets/screenshot_tire_strategy.png` |
+| Pit Stops | `assets/screenshot_pit_stops.png` |
 | Race Position | `assets/screenshot_race_position.png` |
 | Head to Head | `assets/screenshot_head_to_head.png` |
 | Tyre Degradation | `assets/screenshot_tyre_deg.png` |
