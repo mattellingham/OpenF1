@@ -137,6 +137,7 @@ class ResultsChart(F1Chart):
                 else:
                     time_str = str(status) if status and status != "Finished" else "—"
             else:
+                # Practice/qualifying — show best lap time
                 time_str = "—"
                 for col in ["Q3", "Q2", "Q1", "BestLapTime"]:
                     v = row.get(col)
@@ -154,8 +155,6 @@ class ResultsChart(F1Chart):
                         else:
                             time_str = str(v)
                         break
-                else:
-                    time_str = "—"
 
             fl = row.get("FastestLap") == True or str(row.get("FastestLapRank", "")) == "1"
             fl_badge = '<span style="background:rgba(192,96,200,0.2);color:#C060C8;border:1px solid #C060C8;padding:1px 4px;border-radius:3px;font-size:9px;font-weight:700;margin-left:4px">FL</span>' if fl else ""
@@ -199,4 +198,4 @@ class ResultsChart(F1Chart):
         </tr></thead><tbody>
         {"".join(rows_html)}
         </tbody></table>"""
-        st.markdown(html, unsafe_allow_html=True)
+        st.html(html)
