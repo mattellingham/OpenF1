@@ -8,8 +8,6 @@ Forked from [bordanattila/OpenF1_tutorial](https://github.com/bordanattila/OpenF
 
 ## 📸 Screenshots
 
-> **Replace these placeholders with your own screenshots**
-
 | Chart | Screenshot |
 |---|---|
 | Lap Times | `assets/screenshot_lap_times.png` |
