@@ -1,4 +1,7 @@
-.env__pycache__/
-*.pyc
 .env
 .env.example
+__pycache__/
+*.pyc
+.idea/
+venv/
+.venv/
