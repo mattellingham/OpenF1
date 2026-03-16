@@ -124,21 +124,33 @@ class ResultsChart(F1Chart):
             if is_race:
                 time_val = row.get("Time")
                 if hasattr(time_val, "total_seconds"):
-                    secs = time_val.total_seconds()
-                    m, s = divmod(int(secs), 60)
-                    h, m = divmod(m, 60)
-                    time_str = f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
+                    try:
+                        import math
+                        secs = time_val.total_seconds()
+                        if math.isnan(secs):
+                            raise ValueError
+                        m, s = divmod(int(secs), 60)
+                        h, m = divmod(m, 60)
+                        time_str = f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
+                    except (ValueError, OverflowError):
+                        time_str = str(status) if status and status != "Finished" else "—"
                 else:
                     time_str = str(status) if status and status != "Finished" else "—"
             else:
-                # Practice/qualifying — show best lap time
+                time_str = "—"
                 for col in ["Q3", "Q2", "Q1", "BestLapTime"]:
                     v = row.get(col)
                     if v and str(v) not in ("NaT", "nan", "None", ""):
                         if hasattr(v, "total_seconds"):
-                            secs = v.total_seconds()
-                            m2, s2 = divmod(secs, 60)
-                            time_str = f"{int(m2)}:{s2:06.3f}"
+                            try:
+                                import math
+                                secs = v.total_seconds()
+                                if math.isnan(secs):
+                                    continue
+                                m2, s2 = divmod(secs, 60)
+                                time_str = f"{int(m2)}:{s2:06.3f}"
+                            except (ValueError, OverflowError):
+                                time_str = str(v)
                         else:
                             time_str = str(v)
                         break
