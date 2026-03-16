@@ -246,3 +246,36 @@ def get_race_control_fastf1(year: int, country: str, session_type: str):
         return session.race_control_messages
     except Exception as e:
         return None
+
+
+@st.cache_data(show_spinner="Loading track map telemetry from FastF1...")
+def get_telemetry_fastf1(year: int, country: str, session_type: str):
+    """
+    Load fastest lap telemetry for track map rendering.
+    Returns DataFrame with X, Y, Speed columns.
+    Requires telemetry=True which is heavier — cached after first load.
+    """
+    try:
+        ff1_id = SESSION_NAME_MAP.get(session_type, session_type)
+        session = fastf1.get_session(year, country, ff1_id)
+        session.load(telemetry=True, weather=False, messages=False, laps=True)
+        fast_lap = session.laps.pick_fastest()
+        tel = fast_lap.get_telemetry()
+        return tel[["X", "Y", "Speed"]].dropna().reset_index(drop=True)
+    except Exception as e:
+        return None
+
+
+@st.cache_data(show_spinner="Loading session results from FastF1...")
+def get_results_fastf1(year: int, country: str, session_type: str):
+    """
+    Load session results (finishing order) from FastF1.
+    Returns session.results DataFrame.
+    """
+    try:
+        ff1_id = SESSION_NAME_MAP.get(session_type, session_type)
+        session = fastf1.get_session(year, country, ff1_id)
+        session.load(telemetry=False, weather=False, messages=False, laps=False)
+        return session.results
+    except Exception as e:
+        return None

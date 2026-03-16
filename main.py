@@ -23,12 +23,48 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── Header ────────────────────────────────────────────────────────────────────
+# ── Sidebar navigation ────────────────────────────────────────────────────────
+
+with st.sidebar:
+    st.markdown(
+        "<div style='display:flex;align-items:center;gap:10px;margin-bottom:16px'>"
+        "<span style='font-size:28px;font-weight:900;color:#E8002D;letter-spacing:-1px'>F1</span>"
+        "<span style='font-size:12px;font-weight:600;color:#B8B8C8;letter-spacing:3px;"
+        "text-transform:uppercase'>Strategy</span></div>",
+        unsafe_allow_html=True,
+    )
+
+    page = st.radio(
+        "Navigation",
+        ["📊 Session Analysis", "📅 Schedule & Results", "🏆 Championship"],
+        label_visibility="collapsed",
+    )
+    st.divider()
+
+# ── Page routing ──────────────────────────────────────────────────────────────
+
+if page == "📅 Schedule & Results":
+    st.title("📅 Schedule & Results")
+    year_col, _ = st.columns([1, 3])
+    with year_col:
+        sel_year = st.selectbox("Year", [2023, 2024, 2025, 2026], index=3, key="sched_year")
+    from app.pages import schedule
+    schedule.render(sel_year)
+    st.stop()
+
+if page == "🏆 Championship":
+    st.title("🏆 Championship Standings")
+    year_col, _ = st.columns([1, 3])
+    with year_col:
+        sel_year = st.selectbox("Year", [2023, 2024, 2025, 2026], index=3, key="champ_year")
+    from app.pages import standings
+    standings.render(sel_year)
+    st.stop()
+
+# ── Session Analysis page ─────────────────────────────────────────────────────
 
 st.title("🏎️ Formula 1 Strategy Dashboard")
 st.markdown("_Powered by FastF1 & OpenF1.org • Originally forked from OpenF1 project by Attila Bordan_")
-
-# ── Session selection ─────────────────────────────────────────────────────────
 
 sel_col1, sel_col2, sel_col3, sel_col4 = st.columns([1, 1, 2, 2])
 
@@ -36,7 +72,6 @@ with sel_col1:
     available_years = [2023, 2024, 2025, 2026]
     selected_year = st.selectbox("Year", available_years, index=len(available_years) - 1)
 
-# Fetch meetings — try local API, fall back to FastF1
 fastf1_mode = False
 try:
     all_meetings = fetch_all_meetings(selected_year)
@@ -62,7 +97,6 @@ with sel_col3:
         filtered_meetings["label"] == selected_meeting, "meeting_key"
     ].values[0]
 
-# Fetch sessions
 if fastf1_mode:
     sessions_df = get_sessions_fastf1(selected_year, selected_country)
 else:
@@ -87,8 +121,6 @@ selected_session_key = sessions_df.loc[
     sessions_df["label"] == selected_session, "session_key"
 ].values[0]
 
-
-# ── Live detection ────────────────────────────────────────────────────────────
 
 def is_session_live(session_key) -> bool:
     if fastf1_mode:
@@ -124,15 +156,12 @@ color_map = build_driver_color_map(driver_df)
 driver_info = driver_df[["driver_number", "name_acronym"]]
 all_drivers = sorted(driver_df["name_acronym"].dropna().unique().tolist())
 
-# ── Sidebar ───────────────────────────────────────────────────────────────────
+# ── Sidebar (continued) ───────────────────────────────────────────────────────
 
 with st.sidebar:
-    st.markdown("## 🏎️ Filters")
-
-    # Live badge
     if live:
         st.markdown(
-            "<div style='background:#e00000;color:white;padding:8px 14px;"
+            "<div style='background:#E8002D;color:white;padding:8px 14px;"
             "border-radius:10px;font-weight:bold;text-align:center;margin-bottom:12px'>"
             "🔴 LIVE SESSION</div>",
             unsafe_allow_html=True,
@@ -140,7 +169,7 @@ with st.sidebar:
         st.markdown(f"Auto-refresh every **{LIVE_REFRESH_SECONDS}s**")
         st.divider()
 
-    st.markdown("### Drivers")
+    st.markdown("### 🏎️ Drivers")
     select_all = st.checkbox("Select all", value=True)
     if select_all:
         selected_drivers = all_drivers
@@ -156,15 +185,24 @@ with st.sidebar:
     st.write(f"**Year:** {selected_year}")
     st.write(f"**Country:** {selected_country}")
     st.write(f"**Session:** {selected_session_type}")
-    st.write(f"**Data source:** {'FastF1' if fastf1_mode else 'Local API'}")
+    st.write(f"**Source:** {'FastF1' if fastf1_mode else 'Local API'}")
     if live:
-        st.write(f"**Status:** 🔴 Live")
+        st.write("**Status:** 🔴 Live")
 
 if not selected_drivers:
     st.warning("No drivers selected. Use the sidebar to select drivers.")
     st.stop()
 
-# ── Build context dict passed to every chart ──────────────────────────────────
+# ── Live badge in header ──────────────────────────────────────────────────────
+
+if live:
+    st.markdown(
+        "<span style='background:#E8002D;color:white;padding:4px 12px;"
+        "border-radius:12px;font-weight:bold;font-size:0.85rem'>🔴 LIVE</span>",
+        unsafe_allow_html=True,
+    )
+
+# ── Build context ─────────────────────────────────────────────────────────────
 
 context = {
     "session_key": selected_session_key,
@@ -178,7 +216,7 @@ context = {
     "is_live": live,
 }
 
-# ── Tab layout ────────────────────────────────────────────────────────────────
+# ── Tabs ──────────────────────────────────────────────────────────────────────
 
 tab_labels = [chart.tab_label for chart in REGISTRY]
 tabs = st.tabs(tab_labels)
@@ -188,10 +226,7 @@ for tab, chart in zip(tabs, REGISTRY):
         if not chart.is_available(selected_session_type):
             st.info(f"ℹ️ {chart.unavailable_message}")
             continue
-
         if live:
-            # Wrap each chart in a fragment so it refreshes independently
-            # without rebuilding the whole page
             @st.fragment(run_every=LIVE_REFRESH_SECONDS)
             def _live_render(c=chart, ctx=context):
                 c.render(ctx)

@@ -11,6 +11,8 @@ from app.charts.head_to_head import HeadToHeadChart
 from app.charts.tyre_degradation import TyreDegradationChart
 from app.charts.weather import WeatherChart
 from app.charts.race_control import RaceControlChart
+from app.charts.track_map import TrackMapChart
+from app.charts.results import ResultsChart
 
 REGISTRY = [
     LapTimesChart(),
@@ -21,4 +23,6 @@ REGISTRY = [
     TyreDegradationChart(),
     WeatherChart(),
     RaceControlChart(),
+    TrackMapChart(),
+    ResultsChart(),
 ]
