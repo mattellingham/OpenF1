@@ -1,96 +1,72 @@
 import pandas as pd
 
+# Fallback colour palette for when team colours aren't available (e.g. early season FastF1 data)
+# 20 visually distinct colours
+_FALLBACK_PALETTE = [
+    "#e8002d", "#ff8700", "#ffd700", "#00d2be", "#0067ff",
+    "#dc0000", "#ff8181", "#b6babd", "#358c75", "#5e8fac",
+    "#c92d4b", "#f596c8", "#1e3d61", "#6596ff", "#99274f",
+    "#ff5f00", "#00e0dd", "#469bff", "#9b0000", "#ff1e00",
+]
+
 
 def process_lap_data(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Clean and prepare lap data for visualization.
-
-    - Filters out laps without duration.
-    - Sorts by driver number and lap number.
-
-    Args:
-        df (pd.DataFrame): Raw lap data from API.
-
-    Returns:
-        pd.DataFrame: Cleaned and sorted lap data.
-    """
     if df.empty:
         return df
-
-    df = df[df['lap_duration'].notna()]  # Drop laps missing duration info (i.e. retirements or red flags)
-    df = df.sort_values(['driver_number', 'lap_number'])  # Sort for logical order in lap-time visualization
+    df = df[df['lap_duration'].notna()]
+    df = df.sort_values(['driver_number', 'lap_number'])
     return df
 
 
 def process_stints(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Prepare stint data for the tire strategy chart.
-
-    - Sorts by driver and stint number.
-    - Fills missing compound values with "Unknown".
-    - Adds a lap_count column.
-
-    Args:
-        df (pd.DataFrame): Raw stint data.
-
-    Returns:
-        pd.DataFrame: Cleaned stint data with compound info and lap counts.
-    """
     if df.empty:
         return df
-
-    df = df.sort_values(by=["driver_number", "stint_number"])  # Sort by driver and stint sequence
-    df["compound"] = df["compound"].fillna("Unknown")  # Replace missing compound with placeholder
-    df["lap_count"] = df["lap_end"] - df["lap_start"] + 1  # Compute total laps in each stint
+    df = df.sort_values(by=["driver_number", "stint_number"])
+    df["compound"] = df["compound"].fillna("Unknown")
+    df["lap_count"] = df["lap_end"] - df["lap_start"] + 1
     return df
 
 
 def process_pit_stops(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Prepare pit stop data for charting.
-
-    - Filters out entries without a recorded duration.
-    - Sorts by driver and lap number.
-
-    Args:
-        df (pd.DataFrame): Raw pit stop data.
-
-    Returns:
-        pd.DataFrame: Cleaned and sorted pit stop data.
-    """
     if df.empty:
         return df
-
-    df = df[df["pit_duration"].notna()]  # Only keep pit stops with a recorded duration
-    df = df.sort_values(by=["driver_number", "lap_number"])  # Organize by race sequence
+    df = df[df["pit_duration"].notna()]
+    df = df.sort_values(by=["driver_number", "lap_number"])
     return df
 
 
 def build_driver_color_map(driver_df: pd.DataFrame) -> dict:
     """
-    Build a dictionary that maps driver acronyms to their team color.
+    Build a dict mapping driver acronym -> hex colour string.
 
-    Args:
-        driver_df (pd.DataFrame): DataFrame with driver and team information.
-
-    Returns:
-        dict: Dictionary mapping name_acronym to team_colour.
+    Uses team_colour from the data where available. Falls back to a
+    distinct palette for drivers with missing/invalid colours so that
+    all drivers are visually distinguishable.
     """
     if driver_df.empty:
         return {}
 
-    # Format team colors to always start with '#' for valid CSS color input
-    driver_df["team_colour"] = driver_df["team_colour"].apply(
-        lambda x: f"#{x}" if not str(x).startswith("#") else x
-    )
-    # Plotly prefers string keys; ensure driver_number is string
+    driver_df = driver_df.copy()
     driver_df["driver_number"] = driver_df["driver_number"].astype(str)
 
-    # Build the mapping from acronym to team color
-    color_map = {
-        str(row["name_acronym"]): row["team_colour"]
-        for _, row in driver_df.iterrows()
-        if pd.notna(row["team_colour"])
-    }
+    color_map = {}
+    palette_index = 0
+
+    for _, row in driver_df.iterrows():
+        acronym = str(row["name_acronym"])
+        raw_colour = row.get("team_colour", None)
+
+        # Determine if the colour is valid and usable
+        colour = None
+        if pd.notna(raw_colour) and raw_colour not in (None, "nan", "", "AAAAAA", "#AAAAAA"):
+            raw_str = str(raw_colour).strip()
+            colour = raw_str if raw_str.startswith("#") else f"#{raw_str}"
+
+        if not colour:
+            # Assign from fallback palette, cycling if needed
+            colour = _FALLBACK_PALETTE[palette_index % len(_FALLBACK_PALETTE)]
+            palette_index += 1
+
+        color_map[acronym] = colour
 
     return color_map

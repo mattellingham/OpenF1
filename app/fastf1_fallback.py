@@ -50,7 +50,6 @@ def get_meetings_fastf1(year: int) -> pd.DataFrame:
             "RoundNumber": "meeting_key",
             "Country": "country_name",
             "EventName": "meeting_name",
-            "Location": "location",
         })
         return df
     except Exception as e:
@@ -206,3 +205,19 @@ def get_drivers_fastf1(year: int, country: str, session_type: str) -> pd.DataFra
     except Exception as e:
         st.warning(f"FastF1 fallback could not load driver data: {e}")
         return pd.DataFrame()
+
+
+def _load_session_with_weather(year: int, country: str, session_type: str):
+    """Load session including weather data."""
+    ff1_id = SESSION_NAME_MAP.get(session_type, session_type)
+    session = fastf1.get_session(year, country, ff1_id)
+    session.load(telemetry=False, weather=True, messages=False)
+    return session
+
+
+def _load_session_with_messages(year: int, country: str, session_type: str):
+    """Load session including race control messages."""
+    ff1_id = SESSION_NAME_MAP.get(session_type, session_type)
+    session = fastf1.get_session(year, country, ff1_id)
+    session.load(telemetry=False, weather=False, messages=True)
+    return session
