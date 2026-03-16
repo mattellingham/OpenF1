@@ -1,42 +1,109 @@
-# OpenF1 API: Interactive F1 Strategy Dashboard
+# F1 Strategy Dashboard
 
-An interactive Formula 1 strategy dashboard built with the OpenF1 API, Streamlit, and Plotly. Supports historical data browsing (2023–2026) and live session auto-refresh during active race weekends.
+A self-hosted Formula 1 strategy dashboard built for race weekends. Pulls live timing data directly from F1's official feed during sessions, and falls back to FastF1 for historical data when the live ingestor isn't running. Runs on a Debian VM and is accessible across your LAN from any device.
 
-Forked from [bordanattila/OpenF1_tutorial](https://github.com/bordanattila/OpenF1_tutorial).
+Forked from [bordanattila/OpenF1_tutorial](https://github.com/bordanattila/OpenF1_tutorial) — significantly extended.
 
-## 📊 Features
-
-- Select race sessions by year (2023–2026) and country
-- View lap times per driver with pit-out lap flags
-- Analyse tire strategy over the race distance
-- Compare pit stop durations
-- 🔴 **Live mode** — auto-detects active sessions and refreshes charts every 30 seconds
-- Authenticated access to real-time and 2026 data via OpenF1 OAuth2
+---
 
 ## 📸 Screenshots
 
-![lap_time_chart](./assets/Screenshot1.png)
-![tyre_strategy_chart](./assets/Screenshot2.png)
-![pit_stop_chart](./assets/Screenshot3.png)
+> **Replace these placeholders with your own screenshots**
 
-## 🗂 Project Structure
+| Chart | Screenshot |
+|---|---|
+| Lap Times | `assets/screenshot_lap_times.png` |
+| Tire Strategy | `assets/screenshot_tire_strategy.png` |
+| Race Position | `assets/screenshot_race_position.png` |
+| Head to Head | `assets/screenshot_head_to_head.png` |
+| Tyre Degradation | `assets/screenshot_tyre_deg.png` |
+| Weather | `assets/screenshot_weather.png` |
+| Race Control | `assets/screenshot_race_control.png` |
+
+---
+
+## 📊 Features
+
+- **8 interactive charts** across tabs — lap times, tire strategy, pit stops, race position, head-to-head comparison, tyre degradation, weather, and race control messages
+- **Driver filter** — sidebar multiselect to focus on specific drivers across all charts
+- **Session-aware** — charts that don't apply to a session type (e.g. race position in qualifying) show an explanatory message rather than an error
+- **Live mode** — auto-detects active sessions and refreshes charts every 30 seconds with a 🔴 LIVE badge
+- **Dual data source** — live sessions use a local OpenF1 ingestor writing to MongoDB; historical sessions use FastF1 as a fallback
+- **Resilient** — if the local API has no data, the app falls back to FastF1 automatically with no manual intervention
+- **LAN accessible** — runs on `0.0.0.0:8501`, accessible from tablets, laptops, and widescreen monitors on the same network
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────┐
+│           Streamlit App :8501           │
+│                                         │
+│  main.py → app/charts/ (8 modules)      │
+│         → app/data_loader.py            │
+│         → app/fastf1_fallback.py        │
+└──────────────┬──────────────────────────┘
+               │
+       ┌───────┴────────┐
+       │                │
+       ▼                ▼
+Local API :8000      FastF1 library
+(br-g/openf1)        (historical fallback)
+       │
+       ▼
+   MongoDB
+       │
+       ▼
+OpenF1 ingestor
+(F1 live timing feed)
+```
+
+### Data flow
+
+- **During a live session** — the OpenF1 ingestor connects to `livetiming.formula1.com`, processes the timing stream, and writes to MongoDB. The Streamlit app queries the local REST API (port 8000) which reads from MongoDB.
+- **Historical sessions** — the local MongoDB has no data, so `data_loader.py` raises `OpenF1Unavailable` and the app transparently falls back to FastF1, which loads from F1's official cached timing data.
+
+---
+
+## 🗂️ Project Structure
 
 ```
 OpenF1/
 ├── app/
-│   ├── data_loader.py        # OpenF1 API requests, auth, and caching
-│   ├── data_processor.py     # Cleans and enriches raw API data
-│   └── visualizer.py         # Builds Plotly charts
+│   ├── charts/
+│   │   ├── base.py              # F1Chart base class and shared config
+│   │   ├── __init__.py          # Chart registry — add new charts here
+│   │   ├── lap_times.py
+│   │   ├── tire_strategy.py
+│   │   ├── pit_stops.py
+│   │   ├── position_tracker.py  # Race/Sprint only
+│   │   ├── head_to_head.py
+│   │   ├── tyre_degradation.py
+│   │   ├── weather.py
+│   │   └── race_control.py
+│   ├── data_loader.py           # Local OpenF1 API client
+│   ├── data_processor.py        # Data cleaning and colour mapping
+│   └── fastf1_fallback.py       # FastF1 fallback data source
 ├── .streamlit/
-│   └── config.toml           # Binds to 0.0.0.0:8501 for LAN access
-├── main.py                   # Streamlit app logic and live/historical routing
-├── requirements.txt          # Pinned Python dependencies
-├── Dockerfile                # Container build
-├── docker-compose.yml        # One-command container deployment
-└── .env                      # Credentials and API base URL (not committed)
+│   └── config.toml              # Binds to 0.0.0.0:8501 for LAN access
+├── main.py                      # Streamlit app — session selection, tabs, sidebar
+├── requirements.txt
+├── Dockerfile
+├── docker-compose.yml
+└── .env                         # Local config — not committed
 ```
 
+---
+
 ## 🛠️ Setup
+
+### Prerequisites
+
+- Debian/Ubuntu VM (tested on Debian 12)
+- Python 3.10+
+- Docker (for MongoDB)
+- 10GB+ free disk space (FastF1 cache grows over a season)
 
 ### 1. Clone the repo
 
@@ -45,55 +112,97 @@ git clone https://github.com/mattellingham/OpenF1.git
 cd OpenF1
 ```
 
-### 2. Create and activate a virtual environment
+### 2. Create a virtual environment and install dependencies
 
 ```bash
 python3 -m venv venv
 source venv/bin/activate
-```
-
-### 3. Install dependencies
-
-```bash
 pip install -r requirements.txt
 ```
 
-### 4. Configure `.env`
+### 3. Configure `.env`
 
 ```bash
-cp .env.example .env
 nano .env
 ```
 
-Fill in your values:
-
 ```
-BASE_API_URL=https://api.openf1.org/v1/
-
-# Required for 2026 data and live sessions
-# Get access at: https://openf1.org/auth.html
-OPENF1_USERNAME=your_username_or_email
-OPENF1_PASSWORD=your_password
+BASE_API_URL=http://localhost:8000/v1/
 ```
 
-If you leave the credentials blank the app will still work for historical data (2023–2025) without authentication.
-
-## 🚀 Running the App
-
-### Directly
+### 4. Start MongoDB
 
 ```bash
-streamlit run main.py
+mkdir -p ~/mongodb-data
+docker run -d \
+  --name openf1-mongo \
+  --restart unless-stopped \
+  -p 27017:27017 \
+  -v ~/mongodb-data:/data/db \
+  mongo:7
 ```
 
-Access at `http://localhost:8501`, or `http://<your-ip>:8501` from other devices on your LAN.
-
-### As a persistent background service (Linux/systemd)
+### 5. Set up the OpenF1 ingestor
 
 ```bash
-sudo nano /etc/systemd/system/openf1.service
+cd ~
+git clone https://github.com/br-g/openf1.git
+cd openf1
+python3 -m venv venv-openf1
+source venv-openf1/bin/activate
+pip install -e .
+sudo ln -s /usr/bin/python3 /usr/bin/python  # Debian only
 ```
 
+Create `~/openf1/.env-openf1`:
+```
+MONGO_CONNECTION_STRING=mongodb://localhost:27017
+F1_TOKEN=your_f1tv_entitlement_token_here
+```
+
+> **Getting your F1TV token:** Log in to F1TV in Firefox with the Network tab open. Find the POST request to `api.formula1.com`. Look in Storage → Cookies or Local Storage for `entitlement_token`. Tokens expire every 4 days — update `.env-openf1` and restart `openf1-ingestor` when it does.
+
+### 6. Install systemd services
+
+**`/etc/systemd/system/openf1-api.service`**
+```ini
+[Unit]
+Description=OpenF1 Local Query API
+After=network.target docker.service
+
+[Service]
+Type=simple
+User=your_username
+WorkingDirectory=/home/your_username/openf1
+EnvironmentFile=/home/your_username/openf1/.env-openf1
+ExecStart=/home/your_username/openf1/venv-openf1/bin/uvicorn openf1.services.query_api.app:app --host 0.0.0.0 --port 8000
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**`/etc/systemd/system/openf1-ingestor.service`**
+```ini
+[Unit]
+Description=OpenF1 Live Timing Ingestor
+After=network.target docker.service
+
+[Service]
+Type=simple
+User=your_username
+WorkingDirectory=/home/your_username/openf1
+EnvironmentFile=/home/your_username/openf1/.env-openf1
+ExecStart=/home/your_username/openf1/venv-openf1/bin/python -m openf1.services.ingestor_livetiming.real_time.app
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**`/etc/systemd/system/openf1.service`** (Streamlit app)
 ```ini
 [Unit]
 Description=OpenF1 Streamlit Dashboard
@@ -111,51 +220,114 @@ RestartSec=5
 WantedBy=multi-user.target
 ```
 
+Enable and start:
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable openf1
-sudo systemctl start openf1
+sudo systemctl enable openf1 openf1-api openf1-ingestor
+sudo systemctl start openf1 openf1-api openf1-ingestor
 ```
 
-Check status: `sudo systemctl status openf1`
-View logs: `journalctl -u openf1 -f`
-
-### With Docker
+### 7. Open firewall port
 
 ```bash
-docker compose up -d
+sudo ufw allow 8501/tcp
 ```
 
-Access at `http://<your-ip>:8501`.
+---
 
-## 🔑 Authentication
+## 🚀 Usage
 
-Access to 2026 data and real-time sessions requires a paid OpenF1 account. You can get access at [openf1.org/auth.html](https://openf1.org/auth.html).
+Access the dashboard at `http://<your-vm-ip>:8501` from any device on your LAN.
 
-Once configured in `.env`, the app handles OAuth2 token management automatically — tokens are fetched on first request, cached in memory, and refreshed before expiry. No manual token handling needed.
+Select year → country → session. The sidebar lets you filter to specific drivers. All 8 charts update automatically based on your selection.
 
-## 🔴 Live Mode
+### Live sessions
 
-When a session is currently in progress, the app automatically switches to live mode:
+The ingestor needs to be running **before** a session starts:
+- Practice / Qualifying: at least **15 minutes** before
+- Race: at least **1 hour** before
 
-- A **🔴 LIVE** badge appears in the session header
-- All three charts refresh independently every 30 seconds using Streamlit fragments
-- Live data fetchers use a 30-second cache TTL; historical fetchers cache indefinitely
+The ingestor runs permanently as a systemd service so this is handled automatically. Check it's healthy before a race weekend:
 
-The refresh interval can be tuned by changing `LIVE_REFRESH_SECONDS` at the top of `main.py`.
+```bash
+sudo systemctl status openf1-ingestor
+journalctl -u openf1-ingestor -f
+```
 
-## 🔍 File Descriptions
+### F1TV token refresh
 
-**`app/data_loader.py`** handles all OpenF1 API communication. It manages OAuth2 token acquisition and caching, attaches `Authorization` headers when credentials are present, and returns empty DataFrames for 404 (session not yet available) and 502/503 (API outage) responses rather than crashing. Each endpoint has both a permanent-cache and a 30-second TTL variant for live use.
+Tokens expire every 4 days. When one expires:
 
-**`app/data_processor.py`** cleans and prepares raw API data — filters laps missing duration, calculates stint lap counts, and builds a driver-to-team-colour mapping for the charts.
+```bash
+nano ~/openf1/.env-openf1   # Update F1_TOKEN
+sudo systemctl restart openf1-ingestor
+```
 
-**`app/visualizer.py`** builds the three Plotly figures: a lap time line chart, a horizontal tire strategy bar chart, and a pit stop duration bar chart. All use driver team colours and custom hover templates.
+---
 
-## 💡 Ideas for Extension
+## ➕ Adding a new chart
 
-- Add tire degradation trend lines
-- Compare qualifying vs race pace
-- Highlight fastest lap per driver
-- Sector time breakdown charts
-- MQTT/WebSocket integration for sub-30s live updates
+1. Create `app/charts/my_chart.py` inheriting from `F1Chart`
+2. Set `tab_label`, `session_types`, and `unavailable_message`
+3. Implement `render(context)`
+4. Add to `REGISTRY` in `app/charts/__init__.py`
+
+```python
+from app.charts.base import F1Chart, ALL_SESSIONS
+
+class MyChart(F1Chart):
+    tab_label = "🔧 My Chart"
+    session_types = ALL_SESSIONS
+    unavailable_message = "Not available for this session type."
+
+    def render(self, context: dict) -> None:
+        import streamlit as st
+        st.write("Hello from my chart!")
+        # context keys: session_key, session_type, country, year,
+        #               driver_info, color_map, selected_drivers,
+        #               fastf1_mode, is_live
+```
+
+---
+
+## 🔧 Useful commands
+
+```bash
+# Check all services
+sudo systemctl status openf1 openf1-api openf1-ingestor
+
+# Live ingestor logs
+journalctl -u openf1-ingestor -f
+
+# Streamlit app logs
+journalctl -u openf1 -f
+
+# Test local API
+curl "http://localhost:8000/v1/sessions?year=2026"
+
+# FastF1 cache size
+du -sh ~/.fastf1_cache
+```
+
+---
+
+## 📦 Dependencies
+
+| Package | Purpose |
+|---|---|
+| `streamlit` | Web UI framework |
+| `fastf1` | Historical F1 data fallback |
+| `plotly` | Interactive charts |
+| `pandas` | Data processing |
+| `requests` | Local API client |
+| `numpy` | Tyre degradation trend lines |
+| `python-dotenv` | `.env` file loading |
+
+---
+
+## 🗺️ Roadmap
+
+- [ ] Historical backfill via the `br-g/openf1` historical ingestor (2023–2025 data in local MongoDB)
+- [ ] Automated F1TV token refresh
+- [ ] Sector time breakdown chart
+- [ ] Driver standings tracker across the season
