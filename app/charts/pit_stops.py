@@ -1,6 +1,6 @@
 import streamlit as st
 import plotly.express as px
-from app.charts.base import F1Chart, ALL_SESSIONS
+from app.charts.base import F1Chart, ALL_SESSIONS, PLOTLY_CONFIG
 from app.data_loader import OpenF1Unavailable, fetch_pit_stop, fetch_pit_stop_live
 from app.fastf1_fallback import get_pit_stops_fastf1
 from app.data_processor import process_pit_stops
@@ -61,9 +61,9 @@ class PitStopsChart(F1Chart):
         )
         fig.update_layout(
             hovermode="closest", barmode="group", height=450,
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
             margin=dict(t=40),
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
         if source == "FastF1":
             st.caption("Data source: FastF1")

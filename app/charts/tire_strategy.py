@@ -1,6 +1,6 @@
 import streamlit as st
 import plotly.graph_objects as go
-from app.charts.base import F1Chart, ALL_SESSIONS
+from app.charts.base import F1Chart, ALL_SESSIONS, PLOTLY_CONFIG
 from app.data_loader import OpenF1Unavailable, fetch_stints, fetch_stints_live
 from app.fastf1_fallback import get_stints_fastf1
 from app.data_processor import process_stints
@@ -56,14 +56,25 @@ class TireStrategyChart(F1Chart):
             return
 
         fig = go.Figure()
+        seen_compounds = set()
+
         for _, row in stints_df.iterrows():
             compound = str(row["compound"]).upper()
             acronym = row["name_acronym"]
+            comp_color = COMPOUND_COLORS.get(compound, "#888")
+            first_of_compound = compound not in seen_compounds
+            seen_compounds.add(compound)
+
             fig.add_trace(go.Bar(
-                x=[row["lap_count"]], y=[acronym],
-                base=row["lap_start"], orientation="h",
+                x=[row["lap_count"]],
+                y=[acronym],
+                base=row["lap_start"],
+                orientation="h",
+                name=compound,
+                legendgroup=compound,
+                showlegend=first_of_compound,
                 marker=dict(
-                    color=COMPOUND_COLORS.get(compound, "#888"),
+                    color=comp_color,
                     line=dict(color="rgba(0,0,0,0.3)", width=1),
                 ),
                 hovertemplate=(
@@ -72,16 +83,6 @@ class TireStrategyChart(F1Chart):
                     f"Laps: {row['lap_start']}–{row['lap_end']} ({row['lap_count']} laps)"
                     "<extra></extra>"
                 ),
-                name="", showlegend=False,
-            ))
-
-        # Compound legend
-        seen = stints_df["compound"].str.upper().unique()
-        for compound in seen:
-            fig.add_trace(go.Bar(
-                x=[0], y=[""], name=compound,
-                marker=dict(color=COMPOUND_COLORS.get(compound, "#888")),
-                showlegend=True,
             ))
 
         # Coloured driver labels
@@ -93,13 +94,19 @@ class TireStrategyChart(F1Chart):
                 align="right",
             )
 
+        num_drivers = len(stints_df["name_acronym"].unique())
         fig.update_layout(
-            xaxis_title="Lap Number",
-            barmode="stack", height=max(400, len(stints_df["name_acronym"].unique()) * 28),
-            margin=dict(l=80, t=20),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            xaxis=dict(title="Lap Number", rangemode="tozero"),
+            barmode="stack",
+            height=max(400, num_drivers * 30 + 120),
+            margin=dict(l=80, t=60, r=20, b=40),
+            legend=dict(
+                orientation="h",
+                yanchor="bottom", y=1.02,
+                xanchor="left", x=0,
+            ),
         )
         fig.update_yaxes(showticklabels=False)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
         if source == "FastF1":
             st.caption("Data source: FastF1")

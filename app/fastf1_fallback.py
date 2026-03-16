@@ -50,6 +50,7 @@ def get_meetings_fastf1(year: int) -> pd.DataFrame:
             "RoundNumber": "meeting_key",
             "Country": "country_name",
             "EventName": "meeting_name",
+            "Location": "location",
         })
         return df
     except Exception as e:
@@ -221,3 +222,27 @@ def _load_session_with_messages(year: int, country: str, session_type: str):
     session = fastf1.get_session(year, country, ff1_id)
     session.load(telemetry=False, weather=False, messages=True)
     return session
+
+
+@st.cache_data(show_spinner="Loading weather data from FastF1...")
+def get_weather_fastf1(year: int, country: str, session_type: str):
+    """Returns weather_data DataFrame, loading it fresh with weather=True."""
+    try:
+        ff1_id = SESSION_NAME_MAP.get(session_type, session_type)
+        session = fastf1.get_session(year, country, ff1_id)
+        session.load(telemetry=False, weather=True, messages=False, laps=False)
+        return session.weather_data
+    except Exception as e:
+        return None
+
+
+@st.cache_data(show_spinner="Loading race control data from FastF1...")
+def get_race_control_fastf1(year: int, country: str, session_type: str):
+    """Returns race_control_messages DataFrame, loading it fresh with messages=True."""
+    try:
+        ff1_id = SESSION_NAME_MAP.get(session_type, session_type)
+        session = fastf1.get_session(year, country, ff1_id)
+        session.load(telemetry=False, weather=False, messages=True, laps=False)
+        return session.race_control_messages
+    except Exception as e:
+        return None

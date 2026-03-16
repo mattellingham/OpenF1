@@ -2,7 +2,7 @@ import streamlit as st
 import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
-from app.charts.base import F1Chart, ALL_SESSIONS
+from app.charts.base import F1Chart, ALL_SESSIONS, PLOTLY_CONFIG
 from app.data_loader import OpenF1Unavailable, fetch_laps, fetch_stints
 from app.fastf1_fallback import get_laps_fastf1, get_stints_fastf1
 from app.data_processor import process_lap_data, process_stints
@@ -135,10 +135,10 @@ class TyreDegradationChart(F1Chart):
             yaxis_title="Lap Time (s)",
             height=500,
             hovermode="closest",
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
             margin=dict(t=40),
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
         st.caption(
             "Trend lines show degradation rate (seconds per lap into stint). "
             "Steeper = faster deg. " + (f"Data source: {source}" if source == "FastF1" else "")

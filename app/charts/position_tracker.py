@@ -1,6 +1,6 @@
 import streamlit as st
 import plotly.graph_objects as go
-from app.charts.base import F1Chart, RACE_SESSIONS
+from app.charts.base import F1Chart, RACE_SESSIONS, PLOTLY_CONFIG
 from app.fastf1_fallback import get_laps_fastf1
 from app.data_loader import OpenF1Unavailable
 
@@ -69,8 +69,8 @@ class PositionTrackerChart(F1Chart):
                 range=[max_pos + 0.5, 0.5],
             ),
             hovermode="closest", height=500,
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
             margin=dict(t=40),
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
         st.caption("Data source: FastF1")

@@ -1,7 +1,7 @@
 import streamlit as st
 import plotly.graph_objects as go
 import pandas as pd
-from app.charts.base import F1Chart, ALL_SESSIONS
+from app.charts.base import F1Chart, ALL_SESSIONS, PLOTLY_CONFIG
 from app.data_loader import OpenF1Unavailable, fetch_laps, fetch_laps_live
 from app.fastf1_fallback import get_laps_fastf1
 from app.data_processor import process_lap_data
@@ -83,13 +83,13 @@ class LapTimesChart(F1Chart):
         fig.update_layout(
             xaxis_title="Lap", yaxis_title="Lap Time",
             hovermode="closest", height=500,
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
             margin=dict(t=40),
         )
         fig.update_yaxes(
             tickvals=tick_vals,
             ticktext=[_format_mmss(v) for v in tick_vals],
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
         if source == "FastF1":
             st.caption("Data source: FastF1")
