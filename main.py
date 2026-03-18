@@ -43,11 +43,13 @@ with st.sidebar:
 
 # ── Page routing ──────────────────────────────────────────────────────────────
 
+_AVAILABLE_YEARS = list(range(2023, datetime.now().year + 1))
+
 if page == "📅 Schedule & Results":
     st.title("📅 Schedule & Results")
     year_col, _ = st.columns([1, 3])
     with year_col:
-        sel_year = st.selectbox("Year", [2023, 2024, 2025, 2026], index=3, key="sched_year")
+        sel_year = st.selectbox("Year", _AVAILABLE_YEARS, index=len(_AVAILABLE_YEARS) - 1, key="sched_year")
     from app.pages import schedule
     schedule.render(sel_year)
     st.stop()
@@ -56,7 +58,7 @@ if page == "🏆 Championship":
     st.title("🏆 Championship Standings")
     year_col, _ = st.columns([1, 3])
     with year_col:
-        sel_year = st.selectbox("Year", [2023, 2024, 2025, 2026], index=3, key="champ_year")
+        sel_year = st.selectbox("Year", _AVAILABLE_YEARS, index=len(_AVAILABLE_YEARS) - 1, key="champ_year")
     from app.pages import standings
     standings.render(sel_year)
     st.stop()
@@ -69,8 +71,7 @@ st.markdown("_Powered by FastF1 & OpenF1.org • Originally forked from OpenF1 p
 sel_col1, sel_col2, sel_col3, sel_col4 = st.columns([1, 1, 2, 2])
 
 with sel_col1:
-    available_years = [2023, 2024, 2025, 2026]
-    selected_year = st.selectbox("Year", available_years, index=len(available_years) - 1)
+    selected_year = st.selectbox("Year", _AVAILABLE_YEARS, index=len(_AVAILABLE_YEARS) - 1)
 
 fastf1_mode = False
 try:

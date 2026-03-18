@@ -16,16 +16,7 @@ from app.jolpica import (
     country_flag,
 )
 from app.charts.base import PLOTLY_CONFIG
-
-
-def _pos_badge(pos: int) -> str:
-    colors = {1: ("#C8A000", "#000"), 2: ("#8A8A8A", "#000"), 3: ("#7A4A1A", "#fff")}
-    bg, fg = colors.get(pos, ("#252538", "#aaa"))
-    return (
-        f'<span style="display:inline-flex;align-items:center;justify-content:center;'
-        f'width:22px;height:22px;border-radius:4px;font-size:11px;font-weight:700;'
-        f'background:{bg};color:{fg}">{pos}</span>'
-    )
+from app.data_processor import pos_badge as _pos_badge
 
 
 def _render_driver_standings(standings: list):

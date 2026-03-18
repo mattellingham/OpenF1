@@ -10,26 +10,13 @@ import streamlit as st
 import plotly.graph_objects as go
 from app.charts.base import F1Chart, ALL_SESSIONS, PLOTLY_CONFIG
 from app.fastf1_fallback import get_results_fastf1
+from app.data_processor import pos_badge as _pos_badge_html
 
 
 TYRE_COLORS = {
     "SOFT": "#E8002D", "MEDIUM": "#FFD700", "HARD": "#EBEBEB",
     "INTERMEDIATE": "#39B54A", "WET": "#0067FF",
 }
-
-
-def _pos_badge_html(pos) -> str:
-    try:
-        p = int(pos)
-    except (ValueError, TypeError):
-        return f'<span style="color:#6B6B7B">{pos}</span>'
-    colors = {1: ("#C8A000", "#000"), 2: ("#8A8A8A", "#000"), 3: ("#7A4A1A", "#fff")}
-    bg, fg = colors.get(p, ("#252538", "#aaa"))
-    return (
-        f'<span style="display:inline-flex;align-items:center;justify-content:center;'
-        f'width:22px;height:22px;border-radius:4px;font-size:11px;font-weight:700;'
-        f'background:{bg};color:{fg}">{p}</span>'
-    )
 
 
 class ResultsChart(F1Chart):

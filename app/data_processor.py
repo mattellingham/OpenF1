@@ -1,5 +1,22 @@
 import pandas as pd
 
+# ── Shared HTML helpers ───────────────────────────────────────────────────────
+
+def pos_badge(pos) -> str:
+    """Render a position as a coloured badge span (gold/silver/bronze or grey)."""
+    try:
+        p = int(pos)
+    except (ValueError, TypeError):
+        return f'<span style="color:#6B6B7B">{pos}</span>'
+    colors = {1: ("#C8A000", "#000"), 2: ("#8A8A8A", "#000"), 3: ("#7A4A1A", "#fff")}
+    bg, fg = colors.get(p, ("#252538", "#aaa"))
+    return (
+        f'<span style="display:inline-flex;align-items:center;justify-content:center;'
+        f'width:22px;height:22px;border-radius:4px;font-size:11px;font-weight:700;'
+        f'background:{bg};color:{fg}">{p}</span>'
+    )
+
+
 # Fallback colour palette for when team colours aren't available (e.g. early season FastF1 data)
 # 20 visually distinct colours
 _FALLBACK_PALETTE = [

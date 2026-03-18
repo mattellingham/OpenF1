@@ -14,6 +14,7 @@ from app.jolpica import (
     team_color,
     country_flag,
 )
+from app.data_processor import pos_badge as _pos_badge
 
 
 def _fmt_date(date_str: str) -> str:
@@ -21,16 +22,6 @@ def _fmt_date(date_str: str) -> str:
         return datetime.strptime(date_str, "%Y-%m-%d").strftime("%-d %b")
     except Exception:
         return date_str
-
-
-def _pos_badge(pos: int) -> str:
-    colors = {1: ("#C8A000", "#000"), 2: ("#8A8A8A", "#000"), 3: ("#7A4A1A", "#fff")}
-    bg, fg = colors.get(pos, ("#252538", "#aaa"))
-    return (
-        f'<span style="display:inline-flex;align-items:center;justify-content:center;'
-        f'width:22px;height:22px;border-radius:4px;font-size:11px;font-weight:700;'
-        f'background:{bg};color:{fg}">{pos}</span>'
-    )
 
 
 def _render_race_results(race: dict):

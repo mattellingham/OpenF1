@@ -5,9 +5,12 @@ Used for season-level data: schedule, race results, championship standings.
 All functions return plain DataFrames or dicts and are cached with st.cache_data.
 """
 
+import logging
 import requests
 import pandas as pd
 import streamlit as st
+
+logger = logging.getLogger(__name__)
 
 BASE = "https://api.jolpi.ca/ergast/f1"
 
@@ -62,7 +65,8 @@ def get_schedule(year: int) -> list:
     try:
         data = _get(f"{BASE}/{year}.json?limit=30")
         return data.get("MRData", {}).get("RaceTable", {}).get("Races", [])
-    except Exception:
+    except Exception as e:
+        logger.warning("Jolpica get_schedule(%s) failed: %s", year, e)
         return []
 
 
@@ -74,7 +78,8 @@ def get_driver_standings(year: int = None) -> list:
         data = _get(path)
         tables = data.get("MRData", {}).get("StandingsTable", {}).get("StandingsLists", [])
         return tables[0].get("DriverStandings", []) if tables else []
-    except Exception:
+    except Exception as e:
+        logger.warning("Jolpica get_driver_standings(%s) failed: %s", year, e)
         return []
 
 
@@ -86,7 +91,8 @@ def get_constructor_standings(year: int = None) -> list:
         data = _get(path)
         tables = data.get("MRData", {}).get("StandingsTable", {}).get("StandingsLists", [])
         return tables[0].get("ConstructorStandings", []) if tables else []
-    except Exception:
+    except Exception as e:
+        logger.warning("Jolpica get_constructor_standings(%s) failed: %s", year, e)
         return []
 
 
@@ -97,7 +103,8 @@ def get_race_results(year: int, round_num: int) -> dict | None:
         data = _get(f"{BASE}/{year}/{round_num}/results.json")
         races = data.get("MRData", {}).get("RaceTable", {}).get("Races", [])
         return races[0] if races else None
-    except Exception:
+    except Exception as e:
+        logger.warning("Jolpica get_race_results(%s, %s) failed: %s", year, round_num, e)
         return None
 
 
@@ -108,5 +115,6 @@ def get_qualifying_results(year: int, round_num: int) -> dict | None:
         data = _get(f"{BASE}/{year}/{round_num}/qualifying.json")
         races = data.get("MRData", {}).get("RaceTable", {}).get("Races", [])
         return races[0] if races else None
-    except Exception:
+    except Exception as e:
+        logger.warning("Jolpica get_qualifying_results(%s, %s) failed: %s", year, round_num, e)
         return None
