@@ -201,6 +201,7 @@ def get_drivers_fastf1(year: int, country: str, session_type: str) -> pd.DataFra
                 "driver_number": str(drv_num),
                 "name_acronym": info.get("Abbreviation", info.get("Tla", drv_num)),
                 "team_colour": info.get("TeamColour", "AAAAAA"),
+                "team_name": info.get("TeamName", ""),
             })
         return pd.DataFrame(rows)
     except Exception as e:

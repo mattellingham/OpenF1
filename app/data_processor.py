@@ -1,4 +1,5 @@
 import pandas as pd
+from app.jolpica import team_color_by_name
 
 # ── Shared HTML helpers ───────────────────────────────────────────────────────
 
@@ -71,16 +72,22 @@ def build_driver_color_map(driver_df: pd.DataFrame) -> dict:
 
     for _, row in driver_df.iterrows():
         acronym = str(row["name_acronym"])
-        raw_colour = row.get("team_colour", None)
-
-        # Determine if the colour is valid and usable
         colour = None
-        if pd.notna(raw_colour) and raw_colour not in (None, "nan", "", "AAAAAA", "#AAAAAA"):
-            raw_str = str(raw_colour).strip()
-            colour = raw_str if raw_str.startswith("#") else f"#{raw_str}"
 
+        # 1. Try Jolpica canonical colour via team_name (consistent with other pages)
+        team_name = str(row.get("team_name", "") or "")
+        if team_name:
+            colour = team_color_by_name(team_name) or None
+
+        # 2. Fall back to raw team_colour from the API/FastF1
         if not colour:
-            # Assign from fallback palette, cycling if needed
+            raw_colour = row.get("team_colour", None)
+            if pd.notna(raw_colour) and raw_colour not in (None, "nan", "", "AAAAAA", "#AAAAAA"):
+                raw_str = str(raw_colour).strip()
+                colour = raw_str if raw_str.startswith("#") else f"#{raw_str}"
+
+        # 3. Last resort: distinct fallback palette
+        if not colour:
             colour = _FALLBACK_PALETTE[palette_index % len(_FALLBACK_PALETTE)]
             palette_index += 1
 

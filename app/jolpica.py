@@ -48,8 +48,38 @@ def _get(url: str, timeout: int = 10) -> dict:
     return r.json()
 
 
+# Team display name → constructor ID (covers OpenF1 API and FastF1 team name variants)
+_TEAM_NAME_TO_CONSTRUCTOR = {
+    "red bull racing":  "red_bull",
+    "red bull":         "red_bull",
+    "ferrari":          "ferrari",
+    "scuderia ferrari": "ferrari",
+    "mercedes":         "mercedes",
+    "mclaren":          "mclaren",
+    "aston martin":     "aston_martin",
+    "aston martin aramco": "aston_martin",
+    "alpine":           "alpine",
+    "alpine f1 team":   "alpine",
+    "williams":         "williams",
+    "williams racing":  "williams",
+    "haas":             "haas",
+    "haas f1 team":     "haas",
+    "rb":               "rb",
+    "visa cash app rb": "rb",
+    "racing bulls":     "rb",
+    "kick sauber":      "kick_sauber",
+    "sauber":           "sauber",
+}
+
+
 def team_color(constructor_id: str) -> str:
     return CONSTRUCTOR_COLORS.get(constructor_id.lower().replace("-", "_"), "#888888")
+
+
+def team_color_by_name(team_name: str) -> str:
+    """Resolve a team display name (from OpenF1 or FastF1) to its canonical hex colour."""
+    constructor_id = _TEAM_NAME_TO_CONSTRUCTOR.get(team_name.lower().strip(), "")
+    return CONSTRUCTOR_COLORS.get(constructor_id, "")
 
 
 def country_flag(country: str) -> str:
