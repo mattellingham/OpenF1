@@ -156,6 +156,10 @@ else:
     except OpenF1Unavailable:
         driver_df = get_drivers_fastf1(selected_year, selected_country, selected_session_type)
 
+if driver_df.empty:
+    st.info("No data available for this session yet. It may not have taken place.")
+    st.stop()
+
 driver_df["driver_number"] = driver_df["driver_number"].astype(str)
 color_map = build_driver_color_map(driver_df)
 driver_info = driver_df[["driver_number", "name_acronym"]]
