@@ -133,6 +133,10 @@ def is_session_live(session_key) -> bool:
         row = session_rows.iloc[0]
         date_start = datetime.fromisoformat(str(row.get("date_start", "")))
         date_end = datetime.fromisoformat(str(row.get("date_end", "")))
+        if date_start.tzinfo is None:
+            date_start = date_start.replace(tzinfo=timezone.utc)
+        if date_end.tzinfo is None:
+            date_end = date_end.replace(tzinfo=timezone.utc)
         return date_start <= datetime.now(timezone.utc) <= date_end
     except Exception:
         return False

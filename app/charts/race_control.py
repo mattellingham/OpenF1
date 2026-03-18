@@ -67,9 +67,9 @@ class RaceControlChart(F1Chart):
         # ── Message log ───────────────────────────────────────────────────────
         st.markdown("#### Message Log")
         display = rc[["minutes", "Category", "Flag", "Message"]].copy()
+        display = display.sort_values("minutes", ascending=False).reset_index(drop=True)
         display["minutes"] = display["minutes"].apply(lambda x: f"{x:.1f} min")
         display.columns = ["Time", "Category", "Flag", "Message"]
-        display = display.sort_values("Time", ascending=False).reset_index(drop=True)
 
         def flag_badge(flag):
             if not flag:
