@@ -9,10 +9,13 @@ FastF1 maintains its own disk cache (~/.fastf1_cache), so the first load
 of a session downloads ~50-200 MB; subsequent calls return in seconds.
 """
 
+import logging
 import os
 import fastf1
 import pandas as pd
 import streamlit as st
+
+logger = logging.getLogger(__name__)
 
 CACHE_DIR = os.path.expanduser("~/.fastf1_cache")
 os.makedirs(CACHE_DIR, exist_ok=True)
@@ -54,6 +57,7 @@ def get_meetings_fastf1(year: int) -> pd.DataFrame:
         })
         return df
     except Exception as e:
+        logger.exception("FastF1 fallback could not load calendar for %s", e)
         st.warning(f"FastF1 fallback could not load calendar: {e}")
         return pd.DataFrame()
 
@@ -95,6 +99,7 @@ def get_sessions_fastf1(year: int, country: str) -> pd.DataFrame:
             })
         return pd.DataFrame(rows)
     except Exception as e:
+        logger.exception("FastF1 fallback could not load sessions: %s", e)
         st.warning(f"FastF1 fallback could not load sessions: {e}")
         return pd.DataFrame()
 
@@ -129,6 +134,7 @@ def get_laps_fastf1(year: int, country: str, session_type: str) -> pd.DataFrame:
         })
         return laps[["driver_number", "lap_number", "lap_duration", "is_pit_out_lap"]].dropna(subset=["lap_duration"])
     except Exception as e:
+        logger.exception("FastF1 fallback could not load lap data: %s", e)
         st.warning(f"FastF1 fallback could not load lap data: {e}")
         return pd.DataFrame()
 
@@ -153,6 +159,7 @@ def get_stints_fastf1(year: int, country: str, session_type: str) -> pd.DataFram
         })
         return stints[["driver_number", "stint_number", "compound", "lap_start", "lap_end"]]
     except Exception as e:
+        logger.exception("FastF1 fallback could not load stint data: %s", e)
         st.warning(f"FastF1 fallback could not load stint data: {e}")
         return pd.DataFrame()
 
@@ -182,6 +189,7 @@ def get_pit_stops_fastf1(year: int, country: str, session_type: str) -> pd.DataF
         merged = merged[merged["pit_duration"].notna() & (merged["pit_duration"] > 0)]
         return merged[["driver_number", "lap_number", "pit_duration"]]
     except Exception as e:
+        logger.exception("FastF1 fallback could not load pit stop data: %s", e)
         st.warning(f"FastF1 fallback could not load pit stop data: {e}")
         return pd.DataFrame()
 
@@ -205,6 +213,7 @@ def get_drivers_fastf1(year: int, country: str, session_type: str) -> pd.DataFra
             })
         return pd.DataFrame(rows)
     except Exception as e:
+        logger.exception("FastF1 fallback could not load driver data: %s", e)
         st.warning(f"FastF1 fallback could not load driver data: {e}")
         return pd.DataFrame()
 
@@ -234,6 +243,7 @@ def get_weather_fastf1(year: int, country: str, session_type: str):
         session.load(telemetry=False, weather=True, messages=False, laps=False)
         return session.weather_data
     except Exception as e:
+        logger.exception("FastF1 fallback could not load weather data: %s", e)
         return None
 
 
@@ -246,6 +256,7 @@ def get_race_control_fastf1(year: int, country: str, session_type: str):
         session.load(telemetry=False, weather=False, messages=True, laps=False)
         return session.race_control_messages
     except Exception as e:
+        logger.exception("FastF1 fallback could not load race control data: %s", e)
         return None
 
 
@@ -264,6 +275,7 @@ def get_telemetry_fastf1(year: int, country: str, session_type: str):
         tel = fast_lap.get_telemetry()
         return tel[["X", "Y", "Speed"]].dropna().reset_index(drop=True)
     except Exception as e:
+        logger.exception("FastF1 fallback could not load telemetry data: %s", e)
         return None
 
 
@@ -279,4 +291,5 @@ def get_results_fastf1(year: int, country: str, session_type: str):
         session.load(telemetry=False, weather=False, messages=False, laps=False)
         return session.results
     except Exception as e:
+        logger.exception("FastF1 fallback could not load session results: %s", e)
         return None

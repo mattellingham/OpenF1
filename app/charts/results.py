@@ -6,6 +6,7 @@ race results with podium for Race/Sprint, or lap times classification
 for Practice/Qualifying.
 """
 
+import math
 import streamlit as st
 import plotly.graph_objects as go
 from app.charts.base import F1Chart, ALL_SESSIONS, PLOTLY_CONFIG
@@ -60,8 +61,8 @@ class ResultsChart(F1Chart):
             time = ""
             if hasattr(row.get("Time"), "total_seconds"):
                 secs = row["Time"].total_seconds()
-                m, s = divmod(int(secs), 60)
-                h, m = divmod(m, 60)
+                h, remainder = divmod(int(secs), 3600)
+                m, s = divmod(remainder, 60)
                 time = f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
             elif row.get("Status") and row["Status"] != "Finished":
                 time = str(row["Status"])
@@ -112,12 +113,11 @@ class ResultsChart(F1Chart):
                 time_val = row.get("Time")
                 if hasattr(time_val, "total_seconds"):
                     try:
-                        import math
                         secs = time_val.total_seconds()
                         if math.isnan(secs):
                             raise ValueError
-                        m, s = divmod(int(secs), 60)
-                        h, m = divmod(m, 60)
+                        h, remainder = divmod(int(secs), 3600)
+                        m, s = divmod(remainder, 60)
                         time_str = f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
                     except (ValueError, OverflowError):
                         time_str = str(status) if status and status != "Finished" else "—"
@@ -131,7 +131,6 @@ class ResultsChart(F1Chart):
                     if v and str(v) not in ("NaT", "nan", "None", ""):
                         if hasattr(v, "total_seconds"):
                             try:
-                                import math
                                 secs = v.total_seconds()
                                 if math.isnan(secs):
                                     continue

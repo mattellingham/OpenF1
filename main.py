@@ -94,9 +94,11 @@ filtered_meetings = filtered_meetings.sort_values(by="meeting_key", ascending=Fa
 
 with sel_col3:
     selected_meeting = st.selectbox("Grand Prix", filtered_meetings["label"], disabled=True)
-    selected_meeting_key = filtered_meetings.loc[
-        filtered_meetings["label"] == selected_meeting, "meeting_key"
-    ].values[0]
+    _meeting_rows = filtered_meetings.loc[filtered_meetings["label"] == selected_meeting, "meeting_key"]
+    if _meeting_rows.empty:
+        st.error("Could not resolve the selected Grand Prix. Please try a different selection.")
+        st.stop()
+    selected_meeting_key = _meeting_rows.values[0]
 
 if fastf1_mode:
     sessions_df = get_sessions_fastf1(selected_year, selected_country)
@@ -115,12 +117,12 @@ with sel_col4:
     selected_session = st.selectbox("Session", sessions_df["label"])
 
 sessions_df["session_type"] = sessions_df["label"].str.extract(r"^(.*?)\s\(")
-selected_session_type = sessions_df.loc[
-    sessions_df["label"] == selected_session, "session_type"
-].values[0]
-selected_session_key = sessions_df.loc[
-    sessions_df["label"] == selected_session, "session_key"
-].values[0]
+_session_row = sessions_df.loc[sessions_df["label"] == selected_session]
+if _session_row.empty:
+    st.error("Could not resolve the selected session. Please try a different selection.")
+    st.stop()
+selected_session_type = _session_row["session_type"].values[0]
+selected_session_key = _session_row["session_key"].values[0]
 
 
 def is_session_live(session_key) -> bool:

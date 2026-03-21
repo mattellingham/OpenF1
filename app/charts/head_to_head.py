@@ -50,6 +50,9 @@ class HeadToHeadChart(F1Chart):
 
         # Use the fastest driver across all laps as the baseline
         median_times = processed_df.groupby("name_acronym")["lap_duration"].median()
+        if median_times.empty:
+            st.info("No lap data available for the selected drivers.")
+            return
         baseline_driver = median_times.idxmin()
 
         baseline = processed_df[processed_df["name_acronym"] == baseline_driver][

@@ -19,7 +19,8 @@ from app.data_processor import pos_badge as _pos_badge
 
 def _fmt_date(date_str: str) -> str:
     try:
-        return datetime.strptime(date_str, "%Y-%m-%d").strftime("%-d %b")
+        dt = datetime.strptime(date_str, "%Y-%m-%d")
+        return f"{dt.day} {dt.strftime('%b')}"
     except Exception:
         return date_str
 

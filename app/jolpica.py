@@ -96,7 +96,7 @@ def get_schedule(year: int) -> list:
         data = _get(f"{BASE}/{year}.json?limit=30")
         return data.get("MRData", {}).get("RaceTable", {}).get("Races", [])
     except Exception as e:
-        logger.warning("Jolpica get_schedule(%s) failed: %s", year, e)
+        logger.warning("Jolpica get_schedule(%s) failed: %s", year, e, exc_info=True)
         return []
 
 
@@ -109,7 +109,7 @@ def get_driver_standings(year: int = None) -> list:
         tables = data.get("MRData", {}).get("StandingsTable", {}).get("StandingsLists", [])
         return tables[0].get("DriverStandings", []) if tables else []
     except Exception as e:
-        logger.warning("Jolpica get_driver_standings(%s) failed: %s", year, e)
+        logger.warning("Jolpica get_driver_standings(%s) failed: %s", year, e, exc_info=True)
         return []
 
 
@@ -122,7 +122,7 @@ def get_constructor_standings(year: int = None) -> list:
         tables = data.get("MRData", {}).get("StandingsTable", {}).get("StandingsLists", [])
         return tables[0].get("ConstructorStandings", []) if tables else []
     except Exception as e:
-        logger.warning("Jolpica get_constructor_standings(%s) failed: %s", year, e)
+        logger.warning("Jolpica get_constructor_standings(%s) failed: %s", year, e, exc_info=True)
         return []
 
 
@@ -134,7 +134,7 @@ def get_race_results(year: int, round_num: int) -> dict | None:
         races = data.get("MRData", {}).get("RaceTable", {}).get("Races", [])
         return races[0] if races else None
     except Exception as e:
-        logger.warning("Jolpica get_race_results(%s, %s) failed: %s", year, round_num, e)
+        logger.warning("Jolpica get_race_results(%s, %s) failed: %s", year, round_num, e, exc_info=True)
         return None
 
 
@@ -146,5 +146,5 @@ def get_qualifying_results(year: int, round_num: int) -> dict | None:
         races = data.get("MRData", {}).get("RaceTable", {}).get("Races", [])
         return races[0] if races else None
     except Exception as e:
-        logger.warning("Jolpica get_qualifying_results(%s, %s) failed: %s", year, round_num, e)
+        logger.warning("Jolpica get_qualifying_results(%s, %s) failed: %s", year, round_num, e, exc_info=True)
         return None

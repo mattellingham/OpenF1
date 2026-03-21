@@ -12,18 +12,6 @@ from app.charts.base import F1Chart, ALL_SESSIONS, PLOTLY_CONFIG
 from app.fastf1_fallback import get_telemetry_fastf1
 
 
-def _speed_to_color(speed: float, min_spd: float, max_spd: float) -> str:
-    """Map a speed value to a hex colour on a red→yellow→green scale."""
-    t = (speed - min_spd) / (max_spd - min_spd + 1e-9)
-    t = max(0.0, min(1.0, t))
-    if t < 0.5:
-        r, g = 232, int(t * 2 * 215)
-        b = 0
-    else:
-        r, g = int((1 - (t - 0.5) * 2) * 232), 200
-        b = 0
-    return f"#{r:02x}{g:02x}{b:02x}"
-
 
 class TrackMapChart(F1Chart):
     tab_label = "🗺️ Track Map"
@@ -68,17 +56,7 @@ class TrackMapChart(F1Chart):
         step = max(1, len(x) // 600)
         x, y, speed = x[::step], y[::step], speed[::step]
 
-        # Draw as individual short segments, each coloured by speed
         fig = go.Figure()
-
-        # Add all segments in one batch using None separators (much faster than
-        # adding thousands of individual traces)
-        seg_x, seg_y, seg_colors = [], [], []
-        for i in range(len(x) - 1):
-            color = _speed_to_color(speed[i], min_spd, max_spd)
-            seg_x += [x[i], x[i + 1], None]
-            seg_y += [y[i], y[i + 1], None]
-            seg_colors.append(color)
 
         # Plotly doesn't support per-segment colour on a single Scatter trace,
         # so we use a workaround: draw the full path as grey background,

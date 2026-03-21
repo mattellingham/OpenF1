@@ -32,7 +32,7 @@ def fetch_data(endpoint, params=None):
 
     try:
         response = requests.get(full_url, timeout=15)
-    except (requests.exceptions.ConnectionError, requests.exceptions.MissingSchema):
+    except (requests.exceptions.ConnectionError, requests.exceptions.MissingSchema, requests.exceptions.InvalidURL):
         raise OpenF1Unavailable(f"Could not connect to local API — is BASE_API_URL configured?")
 
     # 404 = session exists in schedule but no data yet (future race)

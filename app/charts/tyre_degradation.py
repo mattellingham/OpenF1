@@ -3,7 +3,7 @@ import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 from app.charts.base import F1Chart, ALL_SESSIONS, PLOTLY_CONFIG
-from app.data_loader import OpenF1Unavailable, fetch_laps, fetch_stints
+from app.data_loader import OpenF1Unavailable, fetch_laps, fetch_laps_live, fetch_stints, fetch_stints_live
 from app.fastf1_fallback import get_laps_fastf1, get_stints_fastf1
 from app.data_processor import process_lap_data, process_stints
 
@@ -38,8 +38,10 @@ class TyreDegradationChart(F1Chart):
             source = "FastF1"
         else:
             try:
-                lap_df = fetch_laps(session_key)
-                stints_raw = fetch_stints(session_key)
+                lap_fn = fetch_laps_live if is_live else fetch_laps
+                stints_fn = fetch_stints_live if is_live else fetch_stints
+                lap_df = lap_fn(session_key)
+                stints_raw = stints_fn(session_key)
                 source = "Local"
             except OpenF1Unavailable:
                 lap_df = get_laps_fastf1(year, country, session_type)
