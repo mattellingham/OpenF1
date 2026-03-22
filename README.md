@@ -23,7 +23,7 @@ Forked from [bordanattila/OpenF1_tutorial](https://github.com/bordanattila/OpenF
 
 ## 📊 Features
 
-- **8 interactive charts** across tabs — lap times, tire strategy, pit stops, race position, head-to-head comparison, tyre degradation, weather, and race control messages
+- **10 interactive charts** across tabs — lap times, tire strategy, pit stops, race position, head-to-head comparison, tyre degradation, weather, race control messages, track map, and session results
 - **Driver filter** — sidebar multiselect to focus on specific drivers across all charts
 - **Session-aware** — charts that don't apply to a session type (e.g. race position in qualifying) show an explanatory message rather than an error
 - **Live mode** — auto-detects active sessions and refreshes charts every 30 seconds with a 🔴 LIVE badge
@@ -80,10 +80,16 @@ OpenF1/
 │   │   ├── head_to_head.py
 │   │   ├── tyre_degradation.py
 │   │   ├── weather.py
-│   │   └── race_control.py
+│   │   ├── race_control.py
+│   │   ├── track_map.py
+│   │   └── results.py
+│   ├── pages/
+│   │   ├── schedule.py          # Schedule & Results page
+│   │   └── standings.py         # Championship standings page
 │   ├── data_loader.py           # Local OpenF1 API client
 │   ├── data_processor.py        # Data cleaning and colour mapping
-│   └── fastf1_fallback.py       # FastF1 fallback data source
+│   ├── fastf1_fallback.py       # FastF1 fallback data source
+│   └── jolpica.py               # Jolpica/Ergast API client (standings, schedule)
 ├── .streamlit/
 │   └── config.toml              # Binds to 0.0.0.0:8501 for LAN access
 ├── main.py                      # Streamlit app — session selection, tabs, sidebar
@@ -150,7 +156,8 @@ cd openf1
 python3 -m venv venv-openf1
 source venv-openf1/bin/activate
 pip install -e .
-sudo ln -s /usr/bin/python3 /usr/bin/python  # Debian only
+sudo ln -sf /usr/bin/python3 /usr/bin/python  # Debian only — -f avoids "File exists" error
+pip install fastf1-livetiming  # required by the ingestor recorder subprocess
 ```
 
 Create `~/openf1/.env-openf1`:
@@ -186,7 +193,7 @@ WantedBy=multi-user.target
 ```ini
 [Unit]
 Description=OpenF1 Live Timing Ingestor
-After=network.target docker.service
+After=network.target docker.service openf1-api.service
 
 [Service]
 Type=simple
@@ -329,4 +336,3 @@ du -sh ~/.fastf1_cache
 - [ ] Historical backfill via the `br-g/openf1` historical ingestor (2023–2025 data in local MongoDB)
 - [ ] Automated F1TV token refresh
 - [ ] Sector time breakdown chart
-- [ ] Driver standings tracker across the season
