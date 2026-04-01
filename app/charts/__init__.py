@@ -13,9 +13,11 @@ from app.charts.weather import WeatherChart
 from app.charts.race_control import RaceControlChart
 from app.charts.track_map import TrackMapChart
 from app.charts.results import ResultsChart
+from app.charts.sector_times import SectorTimesChart
 
 REGISTRY = [
     LapTimesChart(),
+    SectorTimesChart(),
     TireStrategyChart(),
     PitStopsChart(),
     PositionTrackerChart(),

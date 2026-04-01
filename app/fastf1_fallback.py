@@ -279,6 +279,32 @@ def get_telemetry_fastf1(year: int, country: str, session_type: str):
         return None
 
 
+@st.cache_data(show_spinner="OpenF1 unavailable — loading sector times from FastF1...")
+def get_sectors_fastf1(year: int, country: str, session_type: str) -> pd.DataFrame:
+    """
+    Returns a sector times DataFrame with columns:
+      driver_number, lap_number, sector_1, sector_2, sector_3 (all seconds)
+    """
+    try:
+        session = _load_session(year, country, session_type)
+        cols = ["DriverNumber", "LapNumber", "Sector1Time", "Sector2Time", "Sector3Time"]
+        laps = session.laps[cols].copy()
+        laps["sector_1"] = laps["Sector1Time"].dt.total_seconds()
+        laps["sector_2"] = laps["Sector2Time"].dt.total_seconds()
+        laps["sector_3"] = laps["Sector3Time"].dt.total_seconds()
+        laps = laps.rename(columns={
+            "DriverNumber": "driver_number",
+            "LapNumber": "lap_number",
+        })
+        return laps[["driver_number", "lap_number", "sector_1", "sector_2", "sector_3"]].dropna(
+            subset=["sector_1", "sector_2", "sector_3"]
+        )
+    except Exception as e:
+        logger.exception("FastF1 fallback could not load sector data: %s", e)
+        st.warning(f"FastF1 fallback could not load sector data: {e}")
+        return pd.DataFrame()
+
+
 @st.cache_data(show_spinner="Loading session results from FastF1...")
 def get_results_fastf1(year: int, country: str, session_type: str):
     """
