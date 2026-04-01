@@ -82,7 +82,7 @@ class ResultsChart(F1Chart):
             abbr, team, time = driver_info(row)
             drv_color = color_map.get(abbr, "#888")
             with col:
-                st.markdown(
+                st.html(
                     f"""<div style="text-align:center;margin-bottom:8px">
                       <div style="height:{height}px;background:linear-gradient(to top,#1e1e2e,#252538);
                                   border-top:3px solid {border_color};border-radius:5px 5px 0 0;
@@ -93,8 +93,7 @@ class ResultsChart(F1Chart):
                                   color:{drv_color}">{abbr}</div>
                       <div style="font-size:10px;color:#6B6B7B;margin-top:2px">{team}</div>
                       <div style="font-size:11px;color:#B8B8C8;margin-top:2px">{time}</div>
-                    </div>""",
-                    unsafe_allow_html=True,
+                    </div>"""
                 )
 
     def _render_table(self, results, color_map, is_race: bool):

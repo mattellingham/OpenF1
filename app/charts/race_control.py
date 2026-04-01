@@ -81,5 +81,5 @@ class RaceControlChart(F1Chart):
             )
 
         display["Flag"] = display["Flag"].apply(flag_badge)
-        st.write(display.to_html(escape=False, index=False), unsafe_allow_html=True)
+        st.html(display.to_html(escape=False, index=False))
         st.caption("Data source: FastF1")

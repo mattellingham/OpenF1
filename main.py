@@ -91,12 +91,11 @@ section[data-testid="stSidebar"] > div {
 # ── Sidebar navigation ────────────────────────────────────────────────────────
 
 with st.sidebar:
-    st.markdown(
+    st.html(
         "<div style='display:flex;align-items:center;gap:10px;margin-bottom:16px'>"
         "<span style='font-size:28px;font-weight:900;color:#E8002D;letter-spacing:-1px'>F1</span>"
         "<span style='font-size:12px;font-weight:600;color:#B8B8C8;letter-spacing:3px;"
-        "text-transform:uppercase'>Strategy</span></div>",
-        unsafe_allow_html=True,
+        "text-transform:uppercase'>Strategy</span></div>"
     )
 
     page = st.radio(
@@ -260,13 +259,12 @@ def _default_session_index(sessions_df: pd.DataFrame) -> int:
 
 # ── Session Analysis page ─────────────────────────────────────────────────────
 
-st.markdown(
+st.html(
     "<div style='margin-bottom:4px'>"
     "<span style='font-size:22px;font-weight:900;color:#E8002D;letter-spacing:-0.5px'>F1</span>"
     "<span style='font-size:18px;font-weight:700;color:#E8E8F0;margin-left:8px'>Strategy Dashboard</span>"
     "<span style='font-size:11px;color:#6B6B7B;margin-left:12px'>"
-    "Powered by FastF1 &amp; OpenF1.org</span></div>",
-    unsafe_allow_html=True,
+    "Powered by FastF1 &amp; OpenF1.org</span></div>"
 )
 
 sel_col1, sel_col2, sel_col3, sel_col4 = st.columns([1, 1, 2, 2])
@@ -380,13 +378,12 @@ all_drivers = sorted(driver_df["name_acronym"].dropna().unique().tolist())
 
 with st.sidebar:
     if live:
-        st.markdown(
+        st.html(
             "<div class='live-pulse' style='background:#E8002D;color:white;padding:8px 14px;"
             "border-radius:10px;font-weight:bold;text-align:center;margin-bottom:8px'>"
             "● LIVE SESSION</div>"
             f"<div style='font-size:11px;color:#8E8EA8;text-align:center;margin-bottom:12px'>"
-            f"Auto-refresh every {LIVE_REFRESH_SECONDS}s</div>",
-            unsafe_allow_html=True,
+            f"Auto-refresh every {LIVE_REFRESH_SECONDS}s</div>"
         )
         st.divider()
 
@@ -404,7 +401,7 @@ with st.sidebar:
             f'</div>'
         )
     roster_html += '</div>'
-    st.markdown(roster_html, unsafe_allow_html=True)
+    st.html(roster_html)
 
     select_all = st.checkbox("Select all", value=True)
     if select_all:
@@ -457,7 +454,7 @@ _live_chip = (
     '● LIVE</span>'
 ) if live else ""
 
-st.markdown(
+st.html(
     f"""<div style="background:#15151E;border:1px solid #2E2E42;border-radius:10px;
                     padding:14px 20px;margin:4px 0 18px;display:flex;align-items:center;
                     gap:16px;box-shadow:0 2px 10px rgba(0,0,0,0.4)">
@@ -476,8 +473,7 @@ st.markdown(
         </span>
         {_live_chip}
       </div>
-    </div>""",
-    unsafe_allow_html=True,
+    </div>"""
 )
 
 # ── Build context ─────────────────────────────────────────────────────────────

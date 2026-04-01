@@ -225,7 +225,7 @@ def render(year: int):
               </div>
               <div style="text-align:right;font-size:11px;color:#B8B8C8">{_fmt_date(date_str)}</div>
             </div>"""
-            st.markdown(row_html, unsafe_allow_html=True)
+            st.html(row_html)
 
             if done:
                 if st.button(f"View results", key=f"res_{rnum}", use_container_width=False):
