@@ -23,7 +23,7 @@ Forked from [bordanattila/OpenF1_tutorial](https://github.com/bordanattila/OpenF
 
 ## 📊 Features
 
-- **10 interactive charts** across tabs — lap times, tyre strategy, pit stops, race position, head-to-head comparison, tyre degradation, weather, race control messages, track map, and session results
+- **11 interactive charts** across tabs — lap times, sector times, tyre strategy, pit stops, race position, head-to-head comparison, tyre degradation, weather, race control messages, track map, and session results
 - **Driver filter** — sidebar multiselect to focus on specific drivers across all charts
 - **Session-aware** — charts that don't apply to a session type (e.g. race position in qualifying) show an explanatory message rather than an error
 - **Live mode** — auto-detects active sessions and refreshes charts every 30 seconds with a 🔴 LIVE badge
@@ -74,6 +74,7 @@ OpenF1/
 │   │   ├── base.py              # F1Chart base class and shared config
 │   │   ├── __init__.py          # Chart registry — add new charts here
 │   │   ├── lap_times.py
+│   │   ├── sector_times.py
 │   │   ├── tire_strategy.py
 │   │   ├── pit_stops.py
 │   │   ├── position_tracker.py  # Race/Sprint only
@@ -343,6 +344,6 @@ du -sh ~/.fastf1_cache
 - [ ] Historical backfill via the `br-g/openf1` historical ingestor (2023–2025 data in local MongoDB) (#23)
 - [x] F1TV token refresh — bookmarklet + dashboard Token page (#24)
 - [ ] Default to current race weekend on load (#20)
-- [ ] Sector time breakdown chart (#25)
-- [ ] Driver standings tracker across the season (#26)
+- [x] Sector time breakdown chart (#25)
+- [x] Driver standings tracker across the season (#26)
 - [ ] UI/UX refresh (#27)
