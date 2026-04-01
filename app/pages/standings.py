@@ -12,6 +12,7 @@ from app.jolpica import (
     get_constructor_standings,
     get_schedule,
     get_race_results,
+    get_driver_standings_at_round,
     team_color,
     country_flag,
 )
@@ -226,6 +227,114 @@ def _render_points_progression(year: int, driver_standings: list):
     st.caption("Top 5 drivers only. Last 10 completed rounds shown.")
 
 
+def _render_position_tracker(year: int, driver_standings: list):
+    """Plot championship position across every completed round for selected drivers."""
+    st.markdown("#### Championship Position Tracker")
+
+    races = get_schedule(year)
+    if not races:
+        st.info("No schedule data available for position tracker.")
+        return
+
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    completed = []
+    for r in races:
+        try:
+            rd = datetime.fromisoformat(
+                f"{r['date']}T{r.get('time','12:00:00Z')}".replace("Z", "+00:00")
+            )
+            if rd <= now:
+                completed.append((int(r["round"]), r.get("raceName", f"R{r['round']}")))
+        except Exception:
+            pass
+
+    if not completed:
+        st.info("No completed races yet this season.")
+        return
+
+    # Driver selector — default top 5
+    all_drivers_in_standings = [
+        s.get("Driver", {}).get("driverId", "") for s in driver_standings
+    ]
+    driver_labels = {
+        s.get("Driver", {}).get("driverId", ""): s.get("Driver", {}).get("familyName", "")
+        for s in driver_standings
+    }
+    driver_colors_map = {
+        s.get("Driver", {}).get("driverId", ""): team_color(
+            (s.get("Constructors") or [{}])[-1].get("constructorId", "")
+        )
+        for s in driver_standings
+    }
+
+    default_selection = all_drivers_in_standings[:5]
+    selected = st.multiselect(
+        "Drivers",
+        options=all_drivers_in_standings,
+        default=default_selection,
+        format_func=lambda did: driver_labels.get(did, did),
+        key="pos_tracker_drivers",
+    )
+    if not selected:
+        st.info("Select at least one driver.")
+        return
+
+    # Load standings at each completed round
+    positions: dict[str, list] = {did: [] for did in selected}
+    round_labels = []
+
+    progress = st.progress(0, text="Loading round-by-round standings...")
+    for i, (rnd, race_name) in enumerate(completed):
+        progress.progress((i + 1) / len(completed), text=f"Loading round {rnd}...")
+        standings_at_round = get_driver_standings_at_round(year, rnd)
+        pos_lookup = {
+            s.get("Driver", {}).get("driverId", ""): int(s.get("position", 99))
+            for s in standings_at_round
+        }
+        short_name = race_name.replace(" Grand Prix", "").replace("Formula 1 ", "")
+        round_labels.append(f"R{rnd} {short_name}")
+        for did in selected:
+            positions[did].append(pos_lookup.get(did, None))
+    progress.empty()
+
+    total_drivers = len(driver_standings)
+
+    fig = go.Figure()
+    for did in selected:
+        pts = positions[did]
+        name = driver_labels.get(did, did)
+        color = driver_colors_map.get(did, "#888")
+        fig.add_trace(go.Scatter(
+            x=round_labels,
+            y=pts,
+            mode="lines+markers",
+            name=name,
+            line=dict(color=color, width=2),
+            marker=dict(size=6, color=color),
+            hovertemplate=f"<b>{name}</b><br>%{{x}}<br>P%{{y}}<extra></extra>",
+            connectgaps=False,
+        ))
+
+    fig.update_layout(
+        height=420,
+        hovermode="x unified",
+        xaxis_title="Round",
+        yaxis=dict(
+            title="Championship Position",
+            autorange="reversed",
+            tickmode="linear",
+            tick0=1,
+            dtick=1,
+            range=[total_drivers + 0.5, 0.5],
+        ),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+        margin=dict(t=40, b=60),
+        xaxis=dict(tickangle=-45),
+    )
+    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+
+
 def render(year: int):
     with st.spinner("Loading standings..."):
         driver_standings = get_driver_standings(year)
@@ -242,4 +351,8 @@ def render(year: int):
         _render_constructor_standings(constructor_standings)
 
     st.divider()
-    _render_points_progression(year, driver_standings)
+    chart_tab, position_tab = st.tabs(["📈 Points Progression", "🏆 Position Tracker"])
+    with chart_tab:
+        _render_points_progression(year, driver_standings)
+    with position_tab:
+        _render_position_tracker(year, driver_standings)

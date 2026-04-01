@@ -139,6 +139,18 @@ def get_race_results(year: int, round_num: int) -> dict | None:
 
 
 @st.cache_data(ttl=300)
+def get_driver_standings_at_round(year: int, round_num: int) -> list:
+    """Return driver championship standings after a specific round."""
+    try:
+        data = _get(f"{BASE}/{year}/{round_num}/driverStandings.json")
+        tables = data.get("MRData", {}).get("StandingsTable", {}).get("StandingsLists", [])
+        return tables[0].get("DriverStandings", []) if tables else []
+    except Exception as e:
+        logger.warning("Jolpica get_driver_standings_at_round(%s, %s) failed: %s", year, round_num, e, exc_info=True)
+        return []
+
+
+@st.cache_data(ttl=300)
 def get_qualifying_results(year: int, round_num: int) -> dict | None:
     """Return qualifying results for a specific race."""
     try:
