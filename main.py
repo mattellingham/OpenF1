@@ -176,8 +176,8 @@ def _default_country_index(meetings_df: pd.DataFrame, year: int) -> int:
         import fastf1
         schedule = fastf1.get_event_schedule(year, include_testing=False)
         today = datetime.now(timezone.utc).date()
-        schedule["_race_date"] = pd.to_datetime(schedule["EventDate"]).dt.date
-        past = schedule[schedule["_race_date"] <= today]
+        schedule["_start_date"] = pd.to_datetime(schedule["Session1DateUtc"]).dt.date
+        past = schedule[schedule["_start_date"] <= today]
         row = past.iloc[-1] if not past.empty else schedule.iloc[0]
         country = row["Country"]
         countries = sorted(meetings_df["country_name"].dropna().unique().tolist())
