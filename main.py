@@ -5,6 +5,7 @@ import subprocess
 import time
 from pathlib import Path
 
+import pandas as pd
 import streamlit as st
 from datetime import datetime, timezone
 
@@ -167,6 +168,41 @@ if page == "🔑 Token":
 
     st.stop()
 
+# ── Helpers for smart defaults ───────────────────────────────────────────────
+
+def _default_country_index(meetings_df: pd.DataFrame, year: int) -> int:
+    """Return the selectbox index for the most recent or current race weekend."""
+    try:
+        import fastf1
+        schedule = fastf1.get_event_schedule(year, include_testing=False)
+        today = datetime.now(timezone.utc).date()
+        schedule["_race_date"] = pd.to_datetime(schedule["EventDate"]).dt.date
+        past = schedule[schedule["_race_date"] <= today]
+        row = past.iloc[-1] if not past.empty else schedule.iloc[0]
+        country = row["Country"]
+        countries = sorted(meetings_df["country_name"].dropna().unique().tolist())
+        if country in countries:
+            return countries.index(country)
+    except Exception:
+        pass
+    return 0
+
+
+def _default_session_index(sessions_df: pd.DataFrame) -> int:
+    """Return the selectbox index for the most recently started session."""
+    try:
+        now = datetime.now(timezone.utc)
+        df = sessions_df.copy()
+        df["_dt"] = pd.to_datetime(df["date_start"], utc=True, errors="coerce")
+        past = df[df["_dt"].notna() & (df["_dt"] <= now)]
+        if not past.empty:
+            last_label = past.iloc[-1]["label"]
+            return sessions_df["label"].tolist().index(last_label)
+    except Exception:
+        pass
+    return 0
+
+
 # ── Session Analysis page ─────────────────────────────────────────────────────
 
 st.title("🏎️ Formula 1 Strategy Dashboard")
@@ -190,7 +226,11 @@ if all_meetings.empty:
 
 with sel_col2:
     available_countries = sorted(all_meetings["country_name"].dropna().unique())
-    selected_country = st.selectbox("Country", available_countries)
+    selected_country = st.selectbox(
+        "Country",
+        available_countries,
+        index=_default_country_index(all_meetings, selected_year),
+    )
 
 filtered_meetings = all_meetings[all_meetings["country_name"] == selected_country].copy()
 filtered_meetings["label"] = filtered_meetings["meeting_name"] + " – " + filtered_meetings["location"]
@@ -218,7 +258,11 @@ if sessions_df.empty:
     st.stop()
 
 with sel_col4:
-    selected_session = st.selectbox("Session", sessions_df["label"])
+    selected_session = st.selectbox(
+        "Session",
+        sessions_df["label"],
+        index=_default_session_index(sessions_df),
+    )
 
 sessions_df["session_type"] = sessions_df["label"].str.extract(r"^(.*?)\s\(")
 _session_row = sessions_df.loc[sessions_df["label"] == selected_session]
