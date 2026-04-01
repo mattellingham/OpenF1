@@ -1,5 +1,14 @@
+import base64
+import json
+import re
+import subprocess
+import time
+from pathlib import Path
+
 import streamlit as st
 from datetime import datetime, timezone
+
+_OPENF1_ENV = Path("/home/mellingham/openf1/.env-openf1")
 from app.data_loader import (
     OpenF1Unavailable,
     fetch_all_meetings,
@@ -36,7 +45,7 @@ with st.sidebar:
 
     page = st.radio(
         "Navigation",
-        ["📊 Session Analysis", "📅 Schedule & Results", "🏆 Championship"],
+        ["📊 Session Analysis", "📅 Schedule & Results", "🏆 Championship", "🔑 Token"],
         label_visibility="collapsed",
     )
     st.divider()
@@ -61,6 +70,101 @@ if page == "🏆 Championship":
         sel_year = st.selectbox("Year", _AVAILABLE_YEARS, index=len(_AVAILABLE_YEARS) - 1, key="champ_year")
     from app.pages import standings
     standings.render(sel_year)
+    st.stop()
+
+# ── Token Update page ────────────────────────────────────────────────────────
+
+if page == "🔑 Token":
+    st.title("🔑 F1TV Token Update")
+
+    def _decode_token(token: str) -> dict | None:
+        try:
+            payload = token.strip().split(".")[1]
+            payload += "=" * (4 - len(payload) % 4)
+            return json.loads(base64.b64decode(payload))
+        except Exception:
+            return None
+
+    st.markdown(
+        "Use the **F1TV bookmarklet** in your browser while logged into F1TV to copy "
+        "your entitlement token, then paste it below. "
+        "Tokens expire every 4 days — update before each race weekend."
+    )
+
+    with st.expander("📎 Bookmarklet setup (one-time)", expanded=False):
+        bookmarklet = (
+            "javascript:(function(){"
+            "var t=null;"
+            "var cookies=document.cookie.split(';');"
+            "for(var i=0;i<cookies.length;i++){"
+            "var parts=cookies[i].trim().split('=');"
+            "var name=parts[0],val=decodeURIComponent(parts.slice(1).join('='));"
+            "if(name==='entitlement_token'&&val.startsWith('eyJ')){t=val;break;}"
+            "if(name==='login-session'){"
+            "try{var d=JSON.parse(val);var s=d.data&&d.data.subscriptionToken;if(s&&s.startsWith('eyJ'))t=t||s;}catch(e){}}"
+            "}"
+            "if(!t){alert('F1TV token not found. Make sure you are logged into f1tv.formula1.com.');return;}"
+            "navigator.clipboard.writeText(t)"
+            ".then(function(){alert('Token copied!\\n\\nPaste it in your OpenF1 dashboard \\u2192 Token page.');})"
+            ".catch(function(){prompt('Copy this token:',t);});"
+            "})();"
+        )
+        st.markdown("1. Create a new bookmark in your browser")
+        st.markdown("2. Set the **URL** to the code below (the name can be anything, e.g. *F1TV Token*)")
+        st.code(bookmarklet, language=None)
+        st.markdown("3. When logged into F1TV, click the bookmark — it copies your token to clipboard")
+        st.markdown("4. Come back here and paste it")
+
+    token_input = st.text_area("Paste token here", height=120, placeholder="eyJ...")
+    if st.button("Update Token", type="primary", disabled=not token_input.strip()):
+        token = token_input.strip()
+        claims = _decode_token(token)
+        if not claims:
+            st.error("Not a valid token — could not decode.")
+        elif claims.get("exp", 0) <= time.time():
+            st.error("Token has already expired — get a fresh one from F1TV.")
+        else:
+            expires_in_h = (claims["exp"] - time.time()) / 3600
+            try:
+                content = _OPENF1_ENV.read_text()
+                if re.search(r"^F1_TOKEN=.*$", content, re.MULTILINE):
+                    content = re.sub(r"^F1_TOKEN=.*$", f"F1_TOKEN={token}", content, flags=re.MULTILINE)
+                else:
+                    content = content.rstrip("\n") + f"\nF1_TOKEN={token}\n"
+                _OPENF1_ENV.write_text(content)
+                subprocess.run(["sudo", "systemctl", "restart", "openf1-ingestor"], check=True)
+                st.success(f"Token updated. Valid for {expires_in_h:.1f} hours. Ingestor restarted.")
+            except subprocess.CalledProcessError:
+                st.error("Token saved but could not restart ingestor — run `sudo systemctl restart openf1-ingestor` manually.")
+            except Exception as e:
+                st.error(f"Failed to update token: {e}")
+
+    st.divider()
+    st.markdown("#### Current token status")
+    try:
+        env = {
+            k.strip(): v.strip()
+            for line in _OPENF1_ENV.read_text().splitlines()
+            if "=" in line and not line.startswith("#")
+            for k, _, v in [line.partition("=")]
+        }
+        current = env.get("F1_TOKEN", "")
+        claims = _decode_token(current) if current else None
+        if not claims:
+            st.warning("No valid token found in .env-openf1.")
+        else:
+            exp = claims.get("exp", 0)
+            expires_in = exp - time.time()
+            expires_dt = datetime.fromtimestamp(exp).strftime("%Y-%m-%d %H:%M")
+            if expires_in <= 0:
+                st.error(f"Token **expired** at {expires_dt}.")
+            elif expires_in < 24 * 3600:
+                st.warning(f"Token expires at {expires_dt} ({expires_in/3600:.1f}h remaining).")
+            else:
+                st.success(f"Token valid until {expires_dt} ({expires_in/3600:.1f}h remaining).")
+    except Exception as e:
+        st.error(f"Could not read token status: {e}")
+
     st.stop()
 
 # ── Session Analysis page ─────────────────────────────────────────────────────
