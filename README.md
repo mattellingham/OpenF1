@@ -346,4 +346,4 @@ du -sh ~/.fastf1_cache
 - [ ] Default to current race weekend on load (#20)
 - [x] Sector time breakdown chart (#25)
 - [x] Driver standings tracker across the season (#26)
-- [ ] UI/UX refresh (#27)
+- [x] UI/UX refresh (#27)
