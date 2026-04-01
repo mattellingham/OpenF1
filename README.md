@@ -23,7 +23,7 @@ Forked from [bordanattila/OpenF1_tutorial](https://github.com/bordanattila/OpenF
 
 ## 📊 Features
 
-- **10 interactive charts** across tabs — lap times, tire strategy, pit stops, race position, head-to-head comparison, tyre degradation, weather, race control messages, track map, and session results
+- **10 interactive charts** across tabs — lap times, tyre strategy, pit stops, race position, head-to-head comparison, tyre degradation, weather, race control messages, track map, and session results
 - **Driver filter** — sidebar multiselect to focus on specific drivers across all charts
 - **Session-aware** — charts that don't apply to a session type (e.g. race position in qualifying) show an explanatory message rather than an error
 - **Live mode** — auto-detects active sessions and refreshes charts every 30 seconds with a 🔴 LIVE badge
@@ -39,7 +39,7 @@ Forked from [bordanattila/OpenF1_tutorial](https://github.com/bordanattila/OpenF
 ┌─────────────────────────────────────────┐
 │           Streamlit App :8501           │
 │                                         │
-│  main.py → app/charts/ (8 modules)      │
+│  main.py → app/charts/ (10 modules)     │
 │         → app/data_loader.py            │
 │         → app/fastf1_fallback.py        │
 └──────────────┬──────────────────────────┘
@@ -47,7 +47,7 @@ Forked from [bordanattila/OpenF1_tutorial](https://github.com/bordanattila/OpenF
        ┌───────┴────────┐
        │                │
        ▼                ▼
-Local API :8000      FastF1 library
+Local API :8008      FastF1 library
 (br-g/openf1)        (historical fallback)
        │
        ▼
@@ -60,7 +60,7 @@ OpenF1 ingestor
 
 ### Data flow
 
-- **During a live session** — the OpenF1 ingestor connects to `livetiming.formula1.com`, processes the timing stream, and writes to MongoDB. The Streamlit app queries the local REST API (port 8000) which reads from MongoDB.
+- **During a live session** — the OpenF1 ingestor connects to `livetiming.formula1.com`, processes the timing stream, and writes to MongoDB. The Streamlit app queries the local REST API (port 8008) which reads from MongoDB.
 - **Historical sessions** — the local MongoDB has no data, so `data_loader.py` raises `OpenF1Unavailable` and the app transparently falls back to FastF1, which loads from F1's official cached timing data.
 
 ---
@@ -132,7 +132,7 @@ nano .env
 ```
 
 ```
-BASE_API_URL=http://localhost:8000/v1/
+BASE_API_URL=http://localhost:8008/v1/
 ```
 
 ### 4. Start MongoDB
@@ -166,7 +166,7 @@ MONGO_CONNECTION_STRING=mongodb://localhost:27017
 F1_TOKEN=your_f1tv_entitlement_token_here
 ```
 
-> **Getting your F1TV token:** Log in to F1TV in Firefox with the Network tab open. Find the POST request to `api.formula1.com`. Look in Storage → Cookies or Local Storage for `entitlement_token`. Tokens expire every 4 days — update `.env-openf1` and restart `openf1-ingestor` when it does.
+> **F1TV token:** The initial token can be obtained by logging in to [f1tv.formula1.com](https://f1tv.formula1.com) in Firefox/Chrome, opening DevTools → Application → Cookies, and copying the value of `entitlement_token`. Paste it into `.env-openf1`. After setup, use the dashboard's **🔑 Token** page and bookmarklet to refresh it — tokens expire every 4 days.
 
 ### 6. Install systemd services
 
@@ -181,7 +181,7 @@ Type=simple
 User=your_username
 WorkingDirectory=/home/your_username/openf1
 EnvironmentFile=/home/your_username/openf1/.env-openf1
-ExecStart=/home/your_username/openf1/venv-openf1/bin/uvicorn openf1.services.query_api.app:app --host 0.0.0.0 --port 8000
+ExecStart=/home/your_username/openf1/venv-openf1/bin/uvicorn openf1.services.query_api.app:app --host 0.0.0.0 --port 8008
 Restart=on-failure
 RestartSec=5
 
@@ -245,7 +245,7 @@ sudo ufw allow 8501/tcp
 
 Access the dashboard at `http://<your-vm-ip>:8501` from any device on your LAN.
 
-Select year → country → session. The sidebar lets you filter to specific drivers. All 8 charts update automatically based on your selection.
+Select year → country → session. The sidebar lets you filter to specific drivers. All 10 charts update automatically based on your selection.
 
 ### Live sessions
 
@@ -262,12 +262,19 @@ journalctl -u openf1-ingestor -f
 
 ### F1TV token refresh
 
-Tokens expire every 4 days. When one expires:
+Tokens expire every 4 days. Refresh via the dashboard:
 
-```bash
-nano ~/openf1/.env-openf1   # Update F1_TOKEN
-sudo systemctl restart openf1-ingestor
-```
+1. Log in to [f1tv.formula1.com](https://f1tv.formula1.com) in your browser
+2. Click the **F1TV Token** bookmarklet (setup instructions in the dashboard under **🔑 Token**)
+3. Paste the copied token into the Token page and click **Update Token**
+
+The dashboard will validate the token, update `.env-openf1`, and restart the ingestor automatically. The Token page also shows the current expiry so you know when a refresh is due.
+
+> **Sudoers requirement:** The dashboard restarts the ingestor via `sudo systemctl`. Add the following to allow this without a password prompt:
+> ```bash
+> echo 'your_username ALL=(ALL) NOPASSWD: /bin/systemctl restart openf1-ingestor' | sudo tee /etc/sudoers.d/openf1-ingestor
+> sudo chmod 440 /etc/sudoers.d/openf1-ingestor
+> ```
 
 ---
 
@@ -309,7 +316,7 @@ journalctl -u openf1-ingestor -f
 journalctl -u openf1 -f
 
 # Test local API
-curl "http://localhost:8000/v1/sessions?year=2026"
+curl "http://localhost:8008/v1/sessions?year=2026"
 
 # FastF1 cache size
 du -sh ~/.fastf1_cache
@@ -333,6 +340,9 @@ du -sh ~/.fastf1_cache
 
 ## 🗺️ Roadmap
 
-- [ ] Historical backfill via the `br-g/openf1` historical ingestor (2023–2025 data in local MongoDB)
-- [ ] Automated F1TV token refresh
-- [ ] Sector time breakdown chart
+- [ ] Historical backfill via the `br-g/openf1` historical ingestor (2023–2025 data in local MongoDB) (#23)
+- [x] F1TV token refresh — bookmarklet + dashboard Token page (#24)
+- [ ] Default to current race weekend on load (#20)
+- [ ] Sector time breakdown chart (#25)
+- [ ] Driver standings tracker across the season (#26)
+- [ ] UI/UX refresh (#27)
