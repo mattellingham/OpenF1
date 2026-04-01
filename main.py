@@ -33,6 +33,61 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# ── Global CSS + font ─────────────────────────────────────────────────────────
+
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;900&display=swap');
+
+html, body, [class*="css"], .stMarkdown p, .stText, button, input, select,
+[data-testid="stSidebar"], [data-baseweb="tab"] {
+    font-family: 'Titillium Web', sans-serif !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0F0F1A; }
+::-webkit-scrollbar-thumb { background: #2E2E42; border-radius: 3px; }
+
+/* Tabs */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 2px;
+    border-bottom: 1px solid #2E2E42;
+    padding-bottom: 0;
+}
+.stTabs [data-baseweb="tab"] {
+    border-radius: 6px 6px 0 0;
+    padding: 6px 16px;
+    color: #6B6B7B;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-bottom: none;
+}
+.stTabs [aria-selected="true"] {
+    background: #15151E !important;
+    color: #E8E8F0 !important;
+    border-color: #2E2E42 !important;
+    border-bottom-color: #15151E !important;
+}
+
+/* Sidebar border */
+section[data-testid="stSidebar"] > div {
+    border-right: 1px solid #2E2E42;
+}
+
+/* Pulsing live ring */
+@keyframes pulse-ring {
+    0%   { box-shadow: 0 0 0 0   rgba(232,0,45,0.55); }
+    70%  { box-shadow: 0 0 0 8px rgba(232,0,45,0);    }
+    100% { box-shadow: 0 0 0 0   rgba(232,0,45,0);    }
+}
+.live-pulse { animation: pulse-ring 1.8s ease infinite; }
+</style>
+""", unsafe_allow_html=True)
+
 # ── Sidebar navigation ────────────────────────────────────────────────────────
 
 with st.sidebar:
@@ -205,8 +260,14 @@ def _default_session_index(sessions_df: pd.DataFrame) -> int:
 
 # ── Session Analysis page ─────────────────────────────────────────────────────
 
-st.title("🏎️ Formula 1 Strategy Dashboard")
-st.markdown("_Powered by FastF1 & OpenF1.org • Originally forked from OpenF1 project by Attila Bordan_")
+st.markdown(
+    "<div style='margin-bottom:4px'>"
+    "<span style='font-size:22px;font-weight:900;color:#E8002D;letter-spacing:-0.5px'>F1</span>"
+    "<span style='font-size:18px;font-weight:700;color:#E8E8F0;margin-left:8px'>Strategy Dashboard</span>"
+    "<span style='font-size:11px;color:#6B6B7B;margin-left:12px'>"
+    "Powered by FastF1 &amp; OpenF1.org</span></div>",
+    unsafe_allow_html=True,
+)
 
 sel_col1, sel_col2, sel_col3, sel_col4 = st.columns([1, 1, 2, 2])
 
@@ -320,15 +381,31 @@ all_drivers = sorted(driver_df["name_acronym"].dropna().unique().tolist())
 with st.sidebar:
     if live:
         st.markdown(
-            "<div style='background:#E8002D;color:white;padding:8px 14px;"
-            "border-radius:10px;font-weight:bold;text-align:center;margin-bottom:12px'>"
-            "🔴 LIVE SESSION</div>",
+            "<div class='live-pulse' style='background:#E8002D;color:white;padding:8px 14px;"
+            "border-radius:10px;font-weight:bold;text-align:center;margin-bottom:8px'>"
+            "● LIVE SESSION</div>"
+            f"<div style='font-size:11px;color:#8E8EA8;text-align:center;margin-bottom:12px'>"
+            f"Auto-refresh every {LIVE_REFRESH_SECONDS}s</div>",
             unsafe_allow_html=True,
         )
-        st.markdown(f"Auto-refresh every **{LIVE_REFRESH_SECONDS}s**")
         st.divider()
 
     st.markdown("### 🏎️ Drivers")
+
+    # Driver roster — visual reference with team colours
+    roster_html = '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px">'
+    for drv in all_drivers:
+        color = color_map.get(drv, "#888")
+        roster_html += (
+            f'<div style="background:#1A1A2E;border:1px solid {color}55;border-radius:6px;'
+            f'padding:4px 7px;display:flex;align-items:center;gap:5px">'
+            f'<span style="display:inline-block;width:3px;height:14px;background:{color};border-radius:2px"></span>'
+            f'<span style="font-size:11px;font-weight:700;color:#E8E8F0;letter-spacing:0.5px">{drv}</span>'
+            f'</div>'
+        )
+    roster_html += '</div>'
+    st.markdown(roster_html, unsafe_allow_html=True)
+
     select_all = st.checkbox("Select all", value=True)
     if select_all:
         selected_drivers = all_drivers
@@ -352,14 +429,56 @@ if not selected_drivers:
     st.warning("No drivers selected. Use the sidebar to select drivers.")
     st.stop()
 
-# ── Live badge in header ──────────────────────────────────────────────────────
+# ── Session header card ───────────────────────────────────────────────────────
 
-if live:
-    st.markdown(
-        "<span style='background:#E8002D;color:white;padding:4px 12px;"
-        "border-radius:12px;font-weight:bold;font-size:0.85rem'>🔴 LIVE</span>",
-        unsafe_allow_html=True,
-    )
+from app.jolpica import country_flag as _country_flag
+
+_header_row = filtered_meetings.loc[filtered_meetings["label"] == selected_meeting]
+_circuit_name = _header_row["meeting_name"].values[0] if not _header_row.empty else selected_country
+_location = _header_row["location"].values[0] if not _header_row.empty else ""
+_flag = _country_flag(selected_country)
+
+_SESSION_BADGE = {
+    "Race":              ("#E8002D", "#fff"),
+    "Sprint":            ("#E8002D", "#fff"),
+    "Qualifying":        ("#FF8700", "#000"),
+    "Sprint Qualifying": ("#FF8700", "#000"),
+    "Sprint Shootout":   ("#FF8700", "#000"),
+    "Practice":          ("#0067FF", "#fff"),
+}
+_badge_bg, _badge_fg = next(
+    (v for k, v in _SESSION_BADGE.items() if selected_session_type.startswith(k)),
+    ("#444", "#fff"),
+)
+
+_live_chip = (
+    '<span class="live-pulse" style="display:inline-block;background:#E8002D;color:#fff;'
+    'padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:1px">'
+    '● LIVE</span>'
+) if live else ""
+
+st.markdown(
+    f"""<div style="background:#15151E;border:1px solid #2E2E42;border-radius:10px;
+                    padding:14px 20px;margin:4px 0 18px;display:flex;align-items:center;
+                    gap:16px;box-shadow:0 2px 10px rgba(0,0,0,0.4)">
+      <div style="font-size:38px;line-height:1;flex-shrink:0">{_flag}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;color:#6B6B7B;letter-spacing:2px;text-transform:uppercase;
+                    margin-bottom:3px">{selected_year}</div>
+        <div style="font-size:19px;font-weight:700;color:#E8E8F0;line-height:1.2;
+                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{_circuit_name}</div>
+        <div style="font-size:12px;color:#8E8EA8;margin-top:2px">{_location}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
+        <span style="background:{_badge_bg};color:{_badge_fg};padding:5px 14px;border-radius:6px;
+                     font-size:11px;font-weight:700;letter-spacing:1px">
+          {selected_session_type.upper()}
+        </span>
+        {_live_chip}
+      </div>
+    </div>""",
+    unsafe_allow_html=True,
+)
 
 # ── Build context ─────────────────────────────────────────────────────────────
 

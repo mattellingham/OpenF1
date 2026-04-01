@@ -10,6 +10,43 @@ To add a new chart:
 """
 
 from abc import ABC, abstractmethod
+import plotly.io as pio
+import plotly.graph_objects as go
+
+# ── Global F1 dark Plotly theme ───────────────────────────────────────────────
+# Applied automatically to every go.Figure() in the dashboard.
+
+pio.templates["f1_dark"] = go.layout.Template(
+    layout=go.Layout(
+        paper_bgcolor="#15151E",
+        plot_bgcolor="#15151E",
+        font=dict(family="Titillium Web, sans-serif", color="#E8E8F0", size=12),
+        xaxis=dict(
+            gridcolor="#2A2A3E",
+            linecolor="#2E2E42",
+            zerolinecolor="#2E2E42",
+            tickcolor="#6B6B7B",
+        ),
+        yaxis=dict(
+            gridcolor="#2A2A3E",
+            linecolor="#2E2E42",
+            zerolinecolor="#2E2E42",
+            tickcolor="#6B6B7B",
+        ),
+        hoverlabel=dict(
+            bgcolor="#1A1A2E",
+            bordercolor="#E8002D",
+            font=dict(family="Titillium Web, sans-serif", color="#E8E8F0", size=12),
+        ),
+        legend=dict(
+            bgcolor="rgba(21,21,30,0.85)",
+            bordercolor="#2E2E42",
+            borderwidth=1,
+            font=dict(color="#E8E8F0"),
+        ),
+    )
+)
+pio.templates.default = "plotly_dark+f1_dark"
 
 ALL_SESSIONS = [
     "Race", "Qualifying", "Practice 1", "Practice 2", "Practice 3",
