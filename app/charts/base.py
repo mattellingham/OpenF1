@@ -44,6 +44,7 @@ pio.templates["f1_dark"] = go.layout.Template(
             borderwidth=1,
             font=dict(color="#E8E8F0"),
         ),
+        margin=dict(t=56),
     )
 )
 pio.templates.default = "plotly_dark+f1_dark"
@@ -57,7 +58,7 @@ TIMED_SESSIONS = ["Race", "Sprint", "Qualifying", "Sprint Qualifying", "Sprint S
 
 # Shared Plotly config — used by all charts for consistent toolbar behaviour
 PLOTLY_CONFIG = dict(
-    displayModeBar=True,
+    displayModeBar="hover",
     modeBarButtonsToRemove=["select2d", "lasso2d"],
     displaylogo=False,
     toImageButtonOptions={"format": "png"},
