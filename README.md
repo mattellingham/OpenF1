@@ -6,29 +6,18 @@ Forked from [bordanattila/OpenF1_tutorial](https://github.com/bordanattila/OpenF
 
 ---
 
-## 📸 Screenshots
-
-| Chart | Screenshot |
-|---|---|
-| Lap Times | `assets/screenshot_lap_times.png` |
-| Tire Strategy | `assets/screenshot_tire_strategy.png` |
-| Pit Stops | `assets/screenshot_pit_stops.png` |
-| Race Position | `assets/screenshot_race_position.png` |
-| Head to Head | `assets/screenshot_head_to_head.png` |
-| Tyre Degradation | `assets/screenshot_tyre_deg.png` |
-| Weather | `assets/screenshot_weather.png` |
-| Race Control | `assets/screenshot_race_control.png` |
-
----
-
 ## 📊 Features
 
 - **11 interactive charts** across tabs — lap times, sector times, tyre strategy, pit stops, race position, head-to-head comparison, tyre degradation, weather, race control messages, track map, and session results
-- **Driver filter** — sidebar multiselect to focus on specific drivers across all charts
-- **Session-aware** — charts that don't apply to a session type (e.g. race position in qualifying) show an explanatory message rather than an error
-- **Live mode** — auto-detects active sessions and refreshes charts every 30 seconds with a 🔴 LIVE badge
-- **Dual data source** — live sessions use a local OpenF1 ingestor writing to MongoDB; historical sessions use FastF1 as a fallback
-- **Resilient** — if the local API has no data, the app falls back to FastF1 automatically with no manual intervention
+- **Championship pages** — driver and constructor standings with points progression and a round-by-round championship position tracker
+- **Schedule & Results** — full season calendar with session results per race
+- **Smart defaults** — automatically selects the current or most recent race weekend and session on load
+- **Driver filter** — sidebar shows colour-coded driver roster cards; multiselect to focus on specific drivers across all charts
+- **Session-aware** — charts that don't apply to a session type show an explanatory message rather than an error
+- **Live mode** — auto-detects active sessions and refreshes charts every 30 seconds with a pulsing LIVE badge
+- **Dual data source** — live sessions use a local OpenF1 ingestor writing to MongoDB; historical sessions fall back to FastF1 automatically
+- **F1TV token management** — dashboard Token page with bookmarklet for one-click token refresh; validates JWT expiry and restarts the ingestor automatically
+- **F1 dark theme** — Titillium Web font, branded colour scheme, unified Plotly dark theme across all charts
 - **LAN accessible** — runs on `0.0.0.0:8501`, accessible from tablets, laptops, and widescreen monitors on the same network
 
 ---
@@ -39,9 +28,12 @@ Forked from [bordanattila/OpenF1_tutorial](https://github.com/bordanattila/OpenF
 ┌─────────────────────────────────────────┐
 │           Streamlit App :8501           │
 │                                         │
-│  main.py → app/charts/ (10 modules)     │
+│  main.py → app/charts/ (11 modules)     │
+│         → app/pages/ (schedule,         │
+│                        standings)       │
 │         → app/data_loader.py            │
 │         → app/fastf1_fallback.py        │
+│         → app/jolpica.py               │
 └──────────────┬──────────────────────────┘
                │
        ┌───────┴────────┐
@@ -62,6 +54,7 @@ OpenF1 ingestor
 
 - **During a live session** — the OpenF1 ingestor connects to `livetiming.formula1.com`, processes the timing stream, and writes to MongoDB. The Streamlit app queries the local REST API (port 8008) which reads from MongoDB.
 - **Historical sessions** — the local MongoDB has no data, so `data_loader.py` raises `OpenF1Unavailable` and the app transparently falls back to FastF1, which loads from F1's official cached timing data.
+- **Championship / schedule data** — fetched from the [Jolpica API](https://api.jolpi.ca) (Ergast successor), cached for 5 minutes.
 
 ---
 
@@ -71,7 +64,7 @@ OpenF1 ingestor
 OpenF1/
 ├── app/
 │   ├── charts/
-│   │   ├── base.py              # F1Chart base class and shared config
+│   │   ├── base.py              # F1Chart base class, Plotly f1_dark template, shared config
 │   │   ├── __init__.py          # Chart registry — add new charts here
 │   │   ├── lap_times.py
 │   │   ├── sector_times.py
@@ -86,13 +79,13 @@ OpenF1/
 │   │   └── results.py
 │   ├── pages/
 │   │   ├── schedule.py          # Schedule & Results page
-│   │   └── standings.py         # Championship standings page
+│   │   └── standings.py         # Championship standings + position tracker
 │   ├── data_loader.py           # Local OpenF1 API client
 │   ├── data_processor.py        # Data cleaning and colour mapping
 │   ├── fastf1_fallback.py       # FastF1 fallback data source
 │   └── jolpica.py               # Jolpica/Ergast API client (standings, schedule)
 ├── .streamlit/
-│   └── config.toml              # Binds to 0.0.0.0:8501 for LAN access
+│   └── config.toml              # LAN server config + F1 dark theme
 ├── main.py                      # Streamlit app — session selection, tabs, sidebar
 ├── requirements.txt
 ├── Dockerfile
@@ -246,7 +239,16 @@ sudo ufw allow 8501/tcp
 
 Access the dashboard at `http://<your-vm-ip>:8501` from any device on your LAN.
 
-Select year → country → session. The sidebar lets you filter to specific drivers. All 10 charts update automatically based on your selection.
+Select year → country → session. The app defaults to the current race weekend and the most recently started session. The sidebar shows a colour-coded driver roster — use the multiselect below it to filter to specific drivers. All 11 charts update automatically based on your selection.
+
+### Pages
+
+| Page | Description |
+|---|---|
+| **📊 Session Analysis** | Main view — all 11 chart tabs for the selected session |
+| **📅 Schedule & Results** | Full season calendar with session-by-session results |
+| **🏆 Championship** | Driver and constructor standings, points progression, and position tracker |
+| **🔑 Token** | F1TV token status and one-click refresh via bookmarklet |
 
 ### Live sessions
 
@@ -269,7 +271,7 @@ Tokens expire every 4 days. Refresh via the dashboard:
 2. Click the **F1TV Token** bookmarklet (setup instructions in the dashboard under **🔑 Token**)
 3. Paste the copied token into the Token page and click **Update Token**
 
-The dashboard will validate the token, update `.env-openf1`, and restart the ingestor automatically. The Token page also shows the current expiry so you know when a refresh is due.
+The dashboard validates the token, updates `.env-openf1`, and restarts the ingestor automatically. The Token page shows the current expiry so you know when a refresh is due.
 
 > **Sudoers requirement:** The dashboard restarts the ingestor via `sudo systemctl`. Add the following to allow this without a password prompt:
 > ```bash
@@ -302,6 +304,8 @@ class MyChart(F1Chart):
         #               fastf1_mode, is_live
 ```
 
+The global `f1_dark` Plotly template in `base.py` is applied automatically to every `go.Figure()` — no per-chart theming needed.
+
 ---
 
 ## 🔧 Useful commands
@@ -333,17 +337,20 @@ du -sh ~/.fastf1_cache
 | `fastf1` | Historical F1 data fallback |
 | `plotly` | Interactive charts |
 | `pandas` | Data processing |
-| `requests` | Local API client |
+| `requests` | Local API client + Jolpica API |
 | `numpy` | Tyre degradation trend lines |
 | `python-dotenv` | `.env` file loading |
+
+External APIs (no package required):
+- **[Jolpica](https://api.jolpi.ca)** — championship standings, race results, season schedule
 
 ---
 
 ## 🗺️ Roadmap
 
-- [ ] Historical backfill via the `br-g/openf1` historical ingestor (2023–2025 data in local MongoDB) (#23)
+- [x] Default to current race weekend on load (#20)
 - [x] F1TV token refresh — bookmarklet + dashboard Token page (#24)
-- [ ] Default to current race weekend on load (#20)
 - [x] Sector time breakdown chart (#25)
 - [x] Driver standings tracker across the season (#26)
-- [x] UI/UX refresh (#27)
+- [x] UI/UX refresh — F1 dark theme, session header, driver roster cards, pulsing live badge (#27)
+- [ ] Historical backfill via the `br-g/openf1` historical ingestor (2023–2025 data in local MongoDB) (#23)
