@@ -61,7 +61,7 @@ def _session_selector(prefix: str, label: str) -> tuple[int, str, str] | None:
     with col_s:
         session_label = st.selectbox("Session", sessions["label"], key=f"{prefix}_session")
 
-    session_type = sessions.loc[sessions["label"] == session_label, "session_type"].values[0]
+    session_type = sessions.loc[sessions["label"] == session_label, "session_name"].values[0]
     return year, country, session_type
 
 
