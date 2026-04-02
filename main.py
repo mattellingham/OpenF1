@@ -54,6 +54,18 @@ html, body, [class*="css"], .stMarkdown p, .stText, button, input, select,
     gap: 2px;
     border-bottom: 1px solid #2E2E42;
     padding-bottom: 0;
+    overflow-x: auto;
+    overflow-y: visible;
+    flex-wrap: nowrap;
+    scrollbar-width: thin;
+    scrollbar-color: #2E2E42 transparent;
+}
+.stTabs [data-baseweb="tab-list"]::-webkit-scrollbar {
+    height: 3px;
+}
+.stTabs [data-baseweb="tab-list"]::-webkit-scrollbar-thumb {
+    background: #2E2E42;
+    border-radius: 2px;
 }
 .stTabs [data-baseweb="tab"] {
     border-radius: 6px 6px 0 0;
