@@ -279,6 +279,51 @@ def get_telemetry_fastf1(year: int, country: str, session_type: str):
         return None
 
 
+@st.cache_data(show_spinner="Loading gap data from FastF1...")
+def get_gaps_fastf1(year: int, country: str, session_type: str) -> pd.DataFrame:
+    """
+    Returns a DataFrame with columns:
+      driver_number, position, gap_to_leader (s), interval (s), current_lap
+    Derived from cumulative lap times — best approximation without live intervals.
+    """
+    try:
+        session = _load_session(year, country, session_type)
+        needed = {"DriverNumber", "LapNumber", "LapTime", "Position"}
+        available = set(session.laps.columns)
+        if not needed.issubset(available):
+            return pd.DataFrame()
+        laps = session.laps[list(needed)].copy()
+        laps["lap_secs"] = laps["LapTime"].dt.total_seconds()
+        laps = laps.dropna(subset=["lap_secs", "Position"])
+        laps = laps.sort_values(["DriverNumber", "LapNumber"])
+        laps["cum_time"] = laps.groupby("DriverNumber")["lap_secs"].cumsum()
+
+        last = (
+            laps.sort_values("LapNumber", ascending=False)
+            .groupby("DriverNumber").first()
+            .reset_index()
+        )
+        last["Position"] = last["Position"].astype(float)
+        last = last.sort_values("Position").reset_index(drop=True)
+
+        if last.empty or 1.0 not in last["Position"].values:
+            return pd.DataFrame()
+
+        leader_time = last.loc[last["Position"] == 1.0, "cum_time"].values[0]
+        last["gap_to_leader"] = (last["cum_time"] - leader_time).clip(lower=0)
+        last["interval"] = last["cum_time"].diff().fillna(0.0).clip(lower=0)
+
+        last = last.rename(columns={
+            "DriverNumber": "driver_number",
+            "LapNumber": "current_lap",
+            "Position": "position",
+        })
+        return last[["driver_number", "position", "gap_to_leader", "interval", "current_lap"]]
+    except Exception as e:
+        logger.exception("FastF1 fallback could not load gap data: %s", e)
+        return pd.DataFrame()
+
+
 @st.cache_data(show_spinner="Loading speed trap data from FastF1...")
 def get_speed_trap_fastf1(year: int, country: str, session_type: str) -> pd.DataFrame:
     """

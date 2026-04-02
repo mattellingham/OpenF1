@@ -97,7 +97,17 @@ def fetch_drivers(session_key):
     return fetch_data("drivers", {"session_key": session_key})
 
 
+@st.cache_data(ttl=300)
+def fetch_intervals(session_key):
+    return fetch_data("intervals", {"session_key": session_key})
+
+
 # ── Live variants (TTL = 30s) ─────────────────────────────────────────────────
+
+@st.cache_data(ttl=30)
+def fetch_intervals_live(session_key):
+    return fetch_data("intervals", {"session_key": session_key})
+
 
 @st.cache_data(ttl=30)
 def fetch_laps_live(session_key):
