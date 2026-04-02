@@ -17,6 +17,7 @@ from app.charts.sector_times import SectorTimesChart
 from app.charts.speed_trap import SpeedTrapChart
 from app.charts.battle_detector import BattleDetectorChart
 from app.charts.pit_window import PitWindowChart
+from app.charts.driver_detail import DriverDetailChart
 
 REGISTRY = [
     LapTimesChart(),
@@ -29,6 +30,7 @@ REGISTRY = [
     PitWindowChart(),
     HeadToHeadChart(),
     TyreDegradationChart(),
+    DriverDetailChart(),
     WeatherChart(),
     RaceControlChart(),
     TrackMapChart(),
