@@ -123,14 +123,19 @@ def _sector_comparison(sess_a: dict, sess_b: dict) -> None:
     def _best_sectors(sectors: pd.DataFrame) -> dict | None:
         if sectors.empty:
             return None
-        needed = {"duration_sector_1", "duration_sector_2", "duration_sector_3"}
-        if not needed.issubset(sectors.columns):
+        # Support both OpenF1 naming (duration_sector_N) and FastF1 naming (sector_N)
+        mapping = {}
+        for short, candidates in [
+            ("S1", ["duration_sector_1", "sector_1"]),
+            ("S2", ["duration_sector_2", "sector_2"]),
+            ("S3", ["duration_sector_3", "sector_3"]),
+        ]:
+            col = next((c for c in candidates if c in sectors.columns), None)
+            if col:
+                mapping[short] = col
+        if not mapping:
             return None
-        return {
-            "S1": sectors["duration_sector_1"].dropna().min(),
-            "S2": sectors["duration_sector_2"].dropna().min(),
-            "S3": sectors["duration_sector_3"].dropna().min(),
-        }
+        return {k: sectors[v].dropna().min() for k, v in mapping.items()}
 
     def _fmt(v):
         if v is None or (isinstance(v, float) and np.isnan(v)):
