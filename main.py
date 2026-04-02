@@ -117,7 +117,7 @@ with st.sidebar:
 
     page = st.radio(
         "Navigation",
-        ["📊 Session Analysis", "📅 Schedule & Results", "🏆 Championship", "🔑 Token"],
+        ["📊 Session Analysis", "📅 Schedule & Results", "🏆 Championship", "🔀 Compare", "🔑 Token"],
         label_visibility="collapsed",
     )
     st.divider()
@@ -133,6 +133,12 @@ if page == "📅 Schedule & Results":
         sel_year = st.selectbox("Year", _AVAILABLE_YEARS, index=len(_AVAILABLE_YEARS) - 1, key="sched_year")
     from app.pages import schedule
     schedule.render(sel_year)
+    st.stop()
+
+if page == "🔀 Compare":
+    st.title("🔀 Session Comparison")
+    from app.pages import compare
+    compare.render(_AVAILABLE_YEARS)
     st.stop()
 
 if page == "🏆 Championship":
