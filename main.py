@@ -251,7 +251,7 @@ def _default_country_index(meetings_df: pd.DataFrame, year: int) -> int:
     """Return the selectbox index for the most recent or current race weekend."""
     try:
         import fastf1
-        schedule = fastf1.get_event_schedule(year, include_testing=False)
+        schedule = fastf1.get_event_schedule(year, include_testing=False).copy()
         today = datetime.now(timezone.utc).date()
         schedule["_start_date"] = pd.to_datetime(schedule["Session1DateUtc"]).dt.date
         past = schedule[schedule["_start_date"] <= today]
