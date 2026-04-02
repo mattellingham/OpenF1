@@ -30,7 +30,7 @@ class PitWindowChart(F1Chart):
             pit_loss = st.number_input(
                 "Pit loss (seconds)",
                 min_value=10.0, max_value=60.0,
-                value=float(avg_pit_loss), step=0.5,
+                value=float(max(10.0, min(60.0, avg_pit_loss))), step=0.5,
                 help="Time lost from pit-in to rejoining (including time in pit lane).",
             )
         with col_laps:
@@ -134,16 +134,28 @@ class PitWindowChart(F1Chart):
         )
 
     def _estimate_pit_loss(self, session_key, year, country, session_type, fastf1_mode) -> float:
-        """Return average pit duration from actual stops, or 22s default."""
+        """Return estimated total pit loss from actual stops, or 22s default.
+
+        OpenF1 pit_duration = stationary box time only → add ~18s transit.
+        FastF1 pit_duration = PitOutTime - PitInTime = full lane time already.
+        In both cases we discard outliers (>60s stationary / >80s full) that
+        indicate safety car pitstops or damaged-car stops.
+        """
         try:
             if not fastf1_mode:
                 pits = fetch_pit_stop(session_key)
+                if not pits.empty and "pit_duration" in pits.columns:
+                    durations = pits["pit_duration"].dropna()
+                    durations = durations[durations < 60]  # discard outliers
+                    if not durations.empty:
+                        return round(float(durations.mean()) + 18, 1)
             else:
                 pits = get_pit_stops_fastf1(year, country, session_type)
-            if not pits.empty and "pit_duration" in pits.columns:
-                avg = pits["pit_duration"].dropna().mean()
-                if avg > 0:
-                    return round(avg + 18, 1)  # add ~18s pit lane transit time
+                if not pits.empty and "pit_duration" in pits.columns:
+                    durations = pits["pit_duration"].dropna()
+                    durations = durations[durations < 80]  # full lane already included
+                    if not durations.empty:
+                        return round(float(durations.mean()), 1)
         except Exception:
             pass
         return 22.0

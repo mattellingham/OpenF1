@@ -271,9 +271,21 @@ def get_telemetry_fastf1(year: int, country: str, session_type: str):
         ff1_id = SESSION_NAME_MAP.get(session_type, session_type)
         session = fastf1.get_session(year, country, ff1_id)
         session.load(telemetry=True, weather=False, messages=False, laps=True)
+        if session.laps.empty:
+            logger.warning("No laps available for telemetry: %s %s %s", year, country, session_type)
+            return None
         fast_lap = session.laps.pick_fastest()
+        if fast_lap is None or (hasattr(fast_lap, "empty") and fast_lap.empty):
+            logger.warning("pick_fastest() returned no lap: %s %s %s", year, country, session_type)
+            return None
         tel = fast_lap.get_telemetry()
-        return tel[["X", "Y", "Speed"]].dropna().reset_index(drop=True)
+        if tel is None or tel.empty:
+            logger.warning("get_telemetry() returned no data: %s %s %s", year, country, session_type)
+            return None
+        result = tel[["X", "Y", "Speed"]].dropna().reset_index(drop=True)
+        if result.empty:
+            return None
+        return result
     except Exception as e:
         logger.exception("FastF1 fallback could not load telemetry data: %s", e)
         return None
