@@ -279,6 +279,28 @@ def get_telemetry_fastf1(year: int, country: str, session_type: str):
         return None
 
 
+@st.cache_data(show_spinner="Loading speed trap data from FastF1...")
+def get_speed_trap_fastf1(year: int, country: str, session_type: str) -> pd.DataFrame:
+    """
+    Returns a DataFrame with columns: driver_number, top_speed (km/h).
+    Uses SpeedST (speed trap) if available, falls back to SpeedFL (finish line).
+    """
+    try:
+        session = _load_session(year, country, session_type)
+        laps = session.laps
+        speed_col = "SpeedST" if "SpeedST" in laps.columns else "SpeedFL" if "SpeedFL" in laps.columns else None
+        if speed_col is None:
+            return pd.DataFrame()
+        df = laps[["DriverNumber", speed_col]].copy()
+        df = df.rename(columns={"DriverNumber": "driver_number", speed_col: "top_speed"})
+        df = df.groupby("driver_number", as_index=False)["top_speed"].max()
+        return df.dropna(subset=["top_speed"])
+    except Exception as e:
+        logger.exception("FastF1 fallback could not load speed trap data: %s", e)
+        st.warning(f"FastF1 fallback could not load speed trap data: {e}")
+        return pd.DataFrame()
+
+
 @st.cache_data(show_spinner="OpenF1 unavailable — loading sector times from FastF1...")
 def get_sectors_fastf1(year: int, country: str, session_type: str) -> pd.DataFrame:
     """

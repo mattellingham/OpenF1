@@ -6,12 +6,20 @@ from app.fastf1_fallback import get_stints_fastf1
 from app.data_processor import process_stints
 
 COMPOUND_COLORS = {
-    "SOFT": "#e8002d",
-    "MEDIUM": "#ffd700",
-    "HARD": "#ebebeb",
+    "SOFT":         "#e8002d",
+    "MEDIUM":       "#ffd700",
+    "HARD":         "#ebebeb",
     "INTERMEDIATE": "#39b54a",
-    "WET": "#0067ff",
-    "UNKNOWN": "#888888",
+    "WET":          "#0067ff",
+    "UNKNOWN":      "#888888",
+}
+COMPOUND_TEXT = {
+    "SOFT": "#fff", "MEDIUM": "#000", "HARD": "#000",
+    "INTERMEDIATE": "#fff", "WET": "#fff", "UNKNOWN": "#fff",
+}
+COMPOUND_ABBR = {
+    "SOFT": "S", "MEDIUM": "M", "HARD": "H",
+    "INTERMEDIATE": "I", "WET": "W", "UNKNOWN": "?",
 }
 
 
@@ -53,6 +61,19 @@ class TireStrategyChart(F1Chart):
 
         if stints_df.empty:
             st.info("No data for selected drivers.")
+            return
+
+        view = st.radio(
+            "View",
+            ["Compact bars", "Gantt chart"],
+            horizontal=True,
+            key="tire_strategy_view",
+        )
+
+        if view == "Compact bars":
+            self._render_compact(stints_df, color_map)
+            if source == "FastF1":
+                st.caption("Data source: FastF1")
             return
 
         fig = go.Figure()
@@ -110,3 +131,56 @@ class TireStrategyChart(F1Chart):
         st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
         if source == "FastF1":
             st.caption("Data source: FastF1")
+
+    def _render_compact(self, stints_df, color_map):
+        """Horizontal stint bars — one row per driver, blocks proportional to stint length."""
+        total_laps = int(stints_df["lap_end"].max())
+        drivers = stints_df["name_acronym"].unique().tolist()
+
+        rows_html = ""
+        for driver in drivers:
+            drv_color = color_map.get(driver, "#888")
+            drv_stints = stints_df[stints_df["name_acronym"] == driver].sort_values("lap_start")
+            blocks = ""
+            for _, s in drv_stints.iterrows():
+                compound = str(s["compound"]).upper()
+                bg = COMPOUND_COLORS.get(compound, "#888")
+                fg = COMPOUND_TEXT.get(compound, "#fff")
+                abbr = COMPOUND_ABBR.get(compound, "?")
+                laps = int(s["lap_count"])
+                flex = max(laps, 1)
+                blocks += (
+                    f'<div style="flex:{flex};background:{bg};color:{fg};'
+                    f'border-radius:3px;padding:3px 5px;font-size:10px;font-weight:700;'
+                    f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'
+                    f'min-width:18px;text-align:center" title="{compound} · {laps} laps">'
+                    f'{abbr} <span style="font-weight:400;opacity:0.85">{laps}</span></div>'
+                )
+            rows_html += (
+                f'<tr>'
+                f'<td style="padding:3px 10px 3px 0;font-size:11px;font-weight:700;'
+                f'color:{drv_color};white-space:nowrap;vertical-align:middle">{driver}</td>'
+                f'<td style="width:100%;padding:2px 0">'
+                f'<div style="display:flex;gap:2px">{blocks}</div></td>'
+                f'</tr>'
+            )
+
+        compound_legend = ""
+        for name, bg in COMPOUND_COLORS.items():
+            if name == "UNKNOWN":
+                continue
+            fg = COMPOUND_TEXT[name]
+            abbr = COMPOUND_ABBR[name]
+            compound_legend += (
+                f'<span style="display:inline-flex;align-items:center;gap:4px;margin-right:10px">'
+                f'<span style="background:{bg};color:{fg};font-size:10px;font-weight:700;'
+                f'padding:1px 6px;border-radius:3px">{abbr}</span>'
+                f'<span style="font-size:10px;color:#8E8EA8">{name.capitalize()}</span></span>'
+            )
+
+        st.html(
+            f'<div style="overflow-x:auto">'
+            f'<table style="width:100%;border-collapse:collapse">{rows_html}</table>'
+            f'</div>'
+            f'<div style="margin-top:10px">{compound_legend}</div>'
+        )

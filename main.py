@@ -78,6 +78,11 @@ section[data-testid="stSidebar"] > div {
     border-right: 1px solid #2E2E42;
 }
 
+/* Tabular numbers for all timing/numeric data */
+.stDataFrame, table, td, th, .stMetric {
+    font-variant-numeric: tabular-nums;
+}
+
 /* Pulsing live ring */
 @keyframes pulse-ring {
     0%   { box-shadow: 0 0 0 0   rgba(232,0,45,0.55); }
@@ -489,6 +494,50 @@ context = {
     "fastf1_mode": fastf1_mode,
     "is_live": live,
 }
+
+# ── Race control banner ───────────────────────────────────────────────────────
+
+try:
+    from app.fastf1_fallback import get_race_control_fastf1 as _get_rc
+    _rc = _get_rc(selected_year, selected_country, selected_session_type)
+    if _rc is not None and not _rc.empty:
+        _RC_ICON = {
+            "GREEN":          ("🟢", "#22c55e", "#000"),
+            "YELLOW":         ("🟡", "#fbbf24", "#000"),
+            "DOUBLE YELLOW":  ("🟡", "#f59e0b", "#000"),
+            "RED":            ("🔴", "#ef4444", "#fff"),
+            "CHEQUERED":      ("🏁", "#f1f5f9", "#000"),
+            "BLUE":           ("🔵", "#3b82f6", "#fff"),
+            "BLACK AND WHITE": ("⬛", "#94a3b8", "#000"),
+            "":               ("📻", "#374151", "#fff"),
+        }
+        _rc = _rc.copy()
+        _rc["Flag"] = _rc["Flag"].fillna("").str.upper()
+        pills = ""
+        for _, _row in _rc.iterrows():
+            _flag = str(_row.get("Flag", "")).upper()
+            _msg = str(_row.get("Message", ""))[:60]
+            _icon, _bg, _fg = _RC_ICON.get(_flag, ("📻", "#374151", "#fff"))
+            # Highlight safety car and red flag rows
+            if "SAFETY CAR" in _msg.upper():
+                _bg, _fg = "#f59e0b", "#000"
+            elif "VIRTUAL SAFETY CAR" in _msg.upper():
+                _bg, _fg = "#94a3b8", "#000"
+            pills += (
+                f'<span style="display:inline-block;background:{_bg};color:{_fg};'
+                f'padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600;'
+                f'white-space:nowrap;margin-right:6px" title="{_msg}">'
+                f'{_icon} {_msg}</span>'
+            )
+        st.html(
+            f'<div style="overflow-x:auto;white-space:nowrap;padding:6px 2px 10px;'
+            f'border-bottom:1px solid #2E2E42;margin-bottom:8px">'
+            f'<span style="font-size:10px;color:#6B6B7B;letter-spacing:1.5px;'
+            f'text-transform:uppercase;margin-right:12px;vertical-align:middle">Race Control</span>'
+            f'{pills}</div>'
+        )
+except Exception:
+    pass
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
 
