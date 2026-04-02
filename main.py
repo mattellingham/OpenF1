@@ -551,6 +551,19 @@ try:
 except Exception:
     pass
 
+# ── Live timing tower ─────────────────────────────────────────────────────────
+
+if live:
+    from app.timing_tower import render_timing_tower
+    st.markdown("#### ⏱️ Timing Tower")
+
+    @st.fragment(run_every=LIVE_REFRESH_SECONDS)
+    def _timing_tower(ctx=context):
+        render_timing_tower(ctx)
+
+    _timing_tower()
+    st.divider()
+
 # ── Tabs ──────────────────────────────────────────────────────────────────────
 
 tab_labels = [chart.tab_label for chart in REGISTRY]
